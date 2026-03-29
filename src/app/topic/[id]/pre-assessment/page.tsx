@@ -118,13 +118,13 @@ export default function PreAssessmentPage({ params }: PageProps) {
               </div>
               <h1 className="text-3xl font-black text-white mb-3">Quick Pre-Assessment</h1>
               <p className="text-slate-400 mb-2">
-                3 questions to gauge your current knowledge.
+                {questions.length} questions to gauge your current knowledge.
               </p>
               <p className="text-slate-500 text-sm mb-8">
                 Don&apos;t worry — this helps us personalize your learning path!
               </p>
-              <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto mb-8">
-                {[1, 2, 3].map((n) => (
+              <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto mb-8">
+                {Array.from({ length: questions.length }, (_, i) => i + 1).map((n) => (
                   <div key={n} className="bg-slate-800 rounded-xl p-3 text-center border border-slate-700">
                     <p className="text-xl font-black text-indigo-400">{n}</p>
                     <p className="text-xs text-slate-500">Question</p>

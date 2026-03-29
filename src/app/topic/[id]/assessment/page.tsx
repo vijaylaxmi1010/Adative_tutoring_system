@@ -60,7 +60,7 @@ export default function AssessmentPage({ params }: PageProps) {
 
     const qs = QUESTIONS.filter((q) => q.topicId === topicId && !q.isPreAssessment);
     // Shuffle for variety
-    const shuffled = [...qs].sort(() => Math.random() - 0.5).slice(0, Math.min(6, qs.length));
+    const shuffled = [...qs].sort(() => Math.random() - 0.5);
     setQuestions(shuffled);
   }, [topicId, router]);
 
