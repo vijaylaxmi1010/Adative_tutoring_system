@@ -63,8 +63,8 @@ export default function PreAssessmentPage({ params }: PageProps) {
       } else {
         // All pre-assessment done
         setPhase('calculating');
-        const pL0 = calculatePL0FromPreAssessment(newResponses, questions);
-        const level = classifyStudent(pL0);
+        const pL0 = calculatePL0FromPreAssessment(topicId, newResponses, questions);
+        const level = classifyStudent(topicId, pL0);
         const bktParams = getInitialBKTParams(topicId, pL0);
 
         const correctCount = newResponses.filter((r) => r.isCorrect).length;

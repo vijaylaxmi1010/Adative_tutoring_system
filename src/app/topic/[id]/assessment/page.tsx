@@ -12,7 +12,7 @@ import { CircularProgress } from '@/components/ui/Progress';
 import Button from '@/components/ui/Button';
 import { getState, updateTopicProgress, addResponse, unlockNextTopics } from '@/lib/store';
 import { QUESTIONS } from '@/lib/mock-data';
-import { updateBKT } from '@/lib/bkt';
+import { updateBKT, getTopicEngagementConfig, getTopicProgressionConfig, getTopicAssessmentConfig } from '@/lib/bkt';
 import { use } from 'react';
 import { Question, QuestionResponse, BKTParams } from '@/types';
 import { cn } from '@/lib/utils';
@@ -41,7 +41,11 @@ export default function AssessmentPage({ params }: PageProps) {
   const [showHintNudge, setShowHintNudge] = useState(false);
   const timeRef = useRef(0);
   const nudgeShownRef = useRef(false);
+  const lastHintNudgeMsRef = useRef(0);
   const questionRef = useRef<Question | null>(null);
+  const engagementConfig = getTopicEngagementConfig(topicId);
+  const progressionConfig = getTopicProgressionConfig(topicId);
+  const assessmentConfig = getTopicAssessmentConfig(topicId);
 
   useEffect(() => {
     const state = getState();
@@ -67,13 +71,16 @@ export default function AssessmentPage({ params }: PageProps) {
   const handleTimeUpdate = useCallback((seconds: number) => {
     timeRef.current = seconds;
     if (!nudgeShownRef.current && questionRef.current) {
-      const threshold = Math.ceil(questionRef.current.avgTimeSeconds * 1.5);
-      if (seconds >= threshold) {
+      const threshold = Math.ceil(questionRef.current.avgTimeSeconds * engagementConfig.timeOverrunFactor);
+      const now = Date.now();
+      const cooldownMs = engagementConfig.popupCooldownSeconds * 1000;
+      if (seconds >= threshold && now - lastHintNudgeMsRef.current >= cooldownMs) {
         nudgeShownRef.current = true;
+        lastHintNudgeMsRef.current = now;
         setShowHintNudge(true);
       }
     }
-  }, []);
+  }, [engagementConfig.popupCooldownSeconds, engagementConfig.timeOverrunFactor]);
 
   const handleAnswer = useCallback((answer: string | string[], isCorrect: boolean) => {
     if (!bktParams || !questions[currentIndex]) return;
@@ -139,7 +146,30 @@ export default function AssessmentPage({ params }: PageProps) {
   const finalizeAssessment = useCallback((finalParams: BKTParams, allResponses: QuestionResponse[]) => {
     const correct = allResponses.filter((r) => r.isCorrect).length;
     const totalHints = allResponses.reduce((sum, r) => sum + r.hintsUsed, 0);
-    const passed = finalParams.pL >= 0.7;
+    const passed = finalParams.pL >= progressionConfig.unlockThresholdPL;
+
+    const responseByQuestionId = new Map(allResponses.map((response) => [response.questionId, response]));
+    const bySubtopic: Record<string, { total: number; correct: number }> = {};
+
+    questions.forEach((question) => {
+      const response = responseByQuestionId.get(question.id);
+      if (!response) return;
+
+      if (!bySubtopic[question.subtopic]) {
+        bySubtopic[question.subtopic] = { total: 0, correct: 0 };
+      }
+
+      bySubtopic[question.subtopic].total += 1;
+      if (response.isCorrect) {
+        bySubtopic[question.subtopic].correct += 1;
+      }
+    });
+
+    const derivedWeakSubtopics = Object.entries(bySubtopic)
+      .filter(([, stats]) => stats.total > 0 && stats.correct / stats.total < assessmentConfig.remedialThreshold)
+      .map(([subtopic]) => subtopic);
+
+    setWeakSubtopics(derivedWeakSubtopics);
 
     updateTopicProgress(topicId, {
       ...finalParams,
@@ -148,20 +178,21 @@ export default function AssessmentPage({ params }: PageProps) {
       hintsUsed: totalHints,
       totalQuestions: allResponses.length,
       correctAnswers: correct,
-      weakSubtopics,
+      weakSubtopics: derivedWeakSubtopics,
     });
 
     if (passed) {
       unlockNextTopics(topicId);
     }
-  }, [topicId, weakSubtopics]);
+  }, [assessmentConfig.remedialThreshold, progressionConfig.unlockThresholdPL, questions, topicId]);
 
   if (!bktParams || questions.length === 0) return null;
 
   const question = questions[currentIndex];
   questionRef.current = question;
   const pLPercent = Math.round(bktParams.pL * 100);
-  const passed = bktParams.pL >= 0.7;
+  const passed = bktParams.pL >= progressionConfig.unlockThresholdPL;
+  const needsRemedial = bktParams.pL < progressionConfig.remedialTriggerPL;
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -207,6 +238,7 @@ export default function AssessmentPage({ params }: PageProps) {
                     avgTimeSeconds={question.avgTimeSeconds}
                     onTimeUpdate={handleTimeUpdate}
                     isRunning={timerRunning}
+                    overrunFactor={engagementConfig.timeOverrunFactor}
                   />
                 </div>
               </div>
@@ -368,7 +400,7 @@ export default function AssessmentPage({ params }: PageProps) {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {weakSubtopics.length > 0 && (
+                  {needsRemedial && weakSubtopics.length > 0 && (
                     <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl mb-3 text-left">
                       <p className="text-yellow-400 font-semibold text-sm mb-1">Weak areas identified:</p>
                       <div className="flex flex-wrap gap-1">
@@ -380,14 +412,25 @@ export default function AssessmentPage({ params }: PageProps) {
                       </div>
                     </div>
                   )}
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="w-full"
-                    onClick={() => router.push(`/topic/${topicId}/remedial`)}
-                  >
-                    Review Weak Topics
-                  </Button>
+                  {needsRemedial ? (
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      className="w-full"
+                      onClick={() => router.push(`/topic/${topicId}/remedial`)}
+                    >
+                      Review Weak Topics
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      className="w-full"
+                      onClick={() => router.push(`/topic/${topicId}/assessment`)}
+                    >
+                      Retry Assessment
+                    </Button>
+                  )}
                   <Button
                     variant="secondary"
                     size="md"

@@ -4252,7 +4252,7 @@ export const QUESTIONS: Question[] = [
 export const TOPIC_CONTENT: TopicContent[] = [
   {
     topicId: 'LA-01',
-    videoUrl: 'https://www.youtube.com/embed/il0EJrY64qE',
+    videoUrl: 'https://www.youtube.com/embed/lnV59_ELs1o',
     textContent: `## Foundational Geometric Elements
 
 ### What is a Point?
@@ -4298,7 +4298,7 @@ These four elements are related in an important way. Think of them on a scale fr
   },
   {
     topicId: 'LA-02',
-    videoUrl: 'https://www.youtube.com/embed/NVuMULQjb3o',
+    videoUrl: 'https://www.youtube.com/embed/1uvwi6pwUOw',
     textContent: `## Anatomy of Angles
 
 ### What is an Angle?
@@ -4349,7 +4349,7 @@ A **protractor** is the tool we use to measure angles. It is shaped like a semic
   },
   {
     topicId: 'PC-01',
-    videoUrl: 'https://www.youtube.com/embed/wWMEBPhxlN8',
+    videoUrl: '',
     textContent: `## Compass and Ruler Basics
 
 ### The Geometric Compass
@@ -4408,7 +4408,7 @@ When you draw only part of a circle (not the full 360°), you create an **arc**.
   },
   {
     topicId: 'LA-03',
-    videoUrl: 'https://www.youtube.com/embed/9JCkURclFdA',
+    videoUrl: '',
     textContent: `## Comparing Angles
 
 ### Why Compare Angles?
@@ -4458,7 +4458,7 @@ Equal angles appear everywhere in geometry:
   },
   {
     topicId: 'PC-02',
-    videoUrl: 'https://www.youtube.com/embed/CvhvzLuUVdc',
+    videoUrl: 'https://www.youtube.com/embed/jWgFVgLnWAY',
     textContent: `## Circular Constructions
 
 ### The Circle
@@ -4515,7 +4515,7 @@ Equidistance means "equal distance." Every point on a circle is equidistant from
   },
   {
     topicId: 'LA-05',
-    videoUrl: 'https://www.youtube.com/embed/NGeB5y_gDaI',
+    videoUrl: 'https://www.youtube.com/embed/UsE1hu-q0Cs',
     textContent: `## Classification of Angles
 
 ### Why Classify Angles?
@@ -4567,7 +4567,7 @@ When a ray rotates back to its original position, it has turned 360°.`,
   },
   {
     topicId: 'LA-04',
-    videoUrl: 'https://www.youtube.com/embed/Hfhon-rjCJo',
+    videoUrl: 'https://www.youtube.com/embed/u7E1iZdnkeY',
     textContent: `## Geometric Relationships
 
 ### Intersecting Lines
@@ -4622,7 +4622,7 @@ This concept of equal angular division appears in many contexts:
   },
   {
     topicId: 'PC-03',
-    videoUrl: 'https://www.youtube.com/embed/nmYiQiAe6Lw',
+    videoUrl: 'https://www.youtube.com/embed/dUhOILbpYq4',
     textContent: `## Bisectors and Replications
 
 ### Copying a Line Segment
@@ -4687,7 +4687,7 @@ These constructions work because of the properties of equilateral triangles and 
   },
   {
     topicId: 'PC-04',
-    videoUrl: 'https://www.youtube.com/embed/T6TSgK0z4Y0',
+    videoUrl: 'https://www.youtube.com/embed/6egryqdKEVk',
     textContent: `## Quadrilateral Construction
 
 ### Rectangles and Their Properties
@@ -4747,7 +4747,7 @@ To convert a rectangle into a square with the same diagonal:
   },
   {
     topicId: 'PC-05',
-    videoUrl: 'https://www.youtube.com/embed/cswMBxJgoEw',
+    videoUrl: 'https://www.youtube.com/embed/m2j8FKAD1gs',
     textContent: `## Applied Geometric Art
 
 ### Composite Figures

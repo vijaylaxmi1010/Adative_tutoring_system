@@ -8,10 +8,11 @@ interface TimerProps {
   avgTimeSeconds: number;
   onTimeUpdate: (seconds: number) => void;
   isRunning: boolean;
+  overrunFactor?: number;
   className?: string;
 }
 
-export default function Timer({ avgTimeSeconds, onTimeUpdate, isRunning, className }: TimerProps) {
+export default function Timer({ avgTimeSeconds, onTimeUpdate, isRunning, overrunFactor = 1.5, className }: TimerProps) {
   const [elapsed, setElapsed] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onTimeUpdateRef = useRef(onTimeUpdate);
@@ -46,7 +47,7 @@ export default function Timer({ avgTimeSeconds, onTimeUpdate, isRunning, classNa
     return m > 0 ? `${m}:${sec.toString().padStart(2, '0')}` : `${sec}s`;
   };
 
-  const isOverTime = elapsed > avgTimeSeconds * 1.5;
+  const isOverTime = elapsed > avgTimeSeconds * overrunFactor;
   const isNearTime = elapsed > avgTimeSeconds;
 
   return (

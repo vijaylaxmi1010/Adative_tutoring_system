@@ -1,11 +1,14 @@
 import { AppState, TopicProgress, QuestionResponse, StudentProfile } from '@/types';
 import { TOPICS } from './mock-data';
+import { getTopicBKTDefaults } from './bkt';
 
 const STATE_KEY = 'ats_state';
 
 export function getDefaultState(): AppState {
   const topicProgress: Record<string, TopicProgress> = {};
   for (const topic of TOPICS) {
+    const bktDefaults = getTopicBKTDefaults(topic.id);
+
     topicProgress[topic.id] = {
       topicId: topic.id,
       studentId: '',
@@ -13,9 +16,9 @@ export function getDefaultState(): AppState {
       isCompleted: false,
       pL: 0,
       pL0: 0,
-      pT: 0.1,
-      pG: 0.2,
-      pS: 0.1,
+      pT: bktDefaults.pT,
+      pG: bktDefaults.pG,
+      pS: bktDefaults.pS,
       hintsUsed: 0,
       totalQuestions: 0,
       correctAnswers: 0,

@@ -17,6 +17,7 @@ import {
 import { Trophy, TrendingUp, AlertTriangle, BookOpen, Star } from 'lucide-react';
 import { AppState } from '@/types';
 import { TOPICS } from '@/lib/mock-data';
+import { getTopicProgressionConfig } from '@/lib/bkt';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 
@@ -75,16 +76,23 @@ export default function FinalReport({ state }: FinalReportProps) {
   const allWeakSubtopics = progresses.flatMap((p) => p.weakSubtopics);
   const uniqueWeak = [...new Set(allWeakSubtopics)];
 
-  // Overall score (weighted average)
-  const completedTopics = progresses.filter((p) => p.isCompleted);
+  // Overall score (topic-weighted by progression settings)
+  const weightedTotals = TOPICS.reduce(
+    (acc, topic) => {
+      const progress = state.topicProgress[topic.id];
+      if (!progress) return acc;
+      const weight = getTopicProgressionConfig(topic.id).finalScoreWeight;
+      acc.weightedScoreSum += progress.pL * weight;
+      acc.weightSum += weight;
+      return acc;
+    },
+    { weightedScoreSum: 0, weightSum: 0 }
+  );
+
   const overallScore =
-    completedTopics.length > 0
-      ? Math.round(
-          (completedTopics.reduce((sum, p) => sum + p.pL, 0) / completedTopics.length) * 100
-        )
-      : Math.round(
-          (progresses.reduce((sum, p) => sum + p.pL, 0) / progresses.length) * 100
-        );
+    weightedTotals.weightSum > 0
+      ? Math.round((weightedTotals.weightedScoreSum / weightedTotals.weightSum) * 100)
+      : 0;
 
   const completedCount = progresses.filter((p) => p.isCompleted).length;
 
