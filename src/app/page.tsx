@@ -133,7 +133,7 @@ export default function LandingPage() {
             </div>
             <span className="font-bold text-white text-lg">GeoLearn</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {returningStudent && (
               <Button variant="ghost" size="sm" onClick={handleContinue}>
                 Continue as {returningStudent.name}
@@ -212,17 +212,17 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-5xl w-full"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-10 max-w-5xl w-full"
           >
             {features.map((f, i) => (
               <div
                 key={i}
-                className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl p-10 text-left"
+                className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl p-12 text-left"
               >
-                <div className="w-14 h-14 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-6">
+                <div className="w-14 h-14 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-8">
                   {f.icon}
                 </div>
-                <h3 className="font-bold text-white text-base mb-3">{f.title}</h3>
+                <h3 className="font-bold text-white text-base mb-4">{f.title}</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
