@@ -146,13 +146,13 @@ export default function LandingPage() {
         </nav>
 
         {/* Hero */}
-        <main className="flex-1 flex flex-col items-center justify-center px-10 text-center py-28">
+        <main className="flex-1 flex flex-col items-center justify-center px-10 text-center pt-8 pb-16">
           {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-10"
+            className="mb-6"
           >
             <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-sm font-medium">
               <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
@@ -164,7 +164,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-black text-white mb-10 leading-tight"
+            className="text-5xl sm:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight"
           >
             Learn Geometry
             <br />
@@ -175,7 +175,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-slate-400 text-xl max-w-2xl mb-16 leading-relaxed"
+            className="text-slate-400 text-xl max-w-2xl mb-10 leading-relaxed"
           >
             An adaptive tutoring system that learns how you learn. It gives you the perfect
             challenge — not too hard, not too easy — so you always keep improving!
@@ -186,7 +186,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-5 mb-24"
+            className="flex flex-col sm:flex-row gap-4 mb-14"
           >
             {returningStudent ? (
               <>
@@ -212,18 +212,18 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-10 max-w-5xl w-full"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-5xl w-full"
           >
             {features.map((f, i) => (
               <div
                 key={i}
-                className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl p-12 text-left"
+                className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl p-7 text-left"
               >
-                <div className="w-14 h-14 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-8">
+                <div className="w-12 h-12 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-5">
                   {f.icon}
                 </div>
-                <h3 className="font-bold text-white text-base mb-4">{f.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
+                <h3 className="font-bold text-white text-lg mb-2">{f.title}</h3>
+                <p className="text-slate-400 text-base leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </motion.div>
@@ -233,7 +233,7 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.6 }}
-            className="mt-20 flex items-center gap-20 text-center"
+            className="mt-12 flex items-center gap-14 text-center"
           >
             {[
               { num: '10', label: 'Topics' },
