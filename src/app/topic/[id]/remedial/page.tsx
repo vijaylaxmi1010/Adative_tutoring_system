@@ -8,6 +8,7 @@ import Navbar from '@/components/layout/Navbar';
 import Button from '@/components/ui/Button';
 import { getState } from '@/lib/store';
 import { TOPICS, TOPIC_CONTENT } from '@/lib/mock-data';
+import { getTopicProgressionConfig } from '@/lib/bkt';
 import { use } from 'react';
 import { Topic, TopicProgress } from '@/types';
 
@@ -23,6 +24,7 @@ export default function RemedialPage({ params }: PageProps) {
   const [viewedSubtopics, setViewedSubtopics] = useState<Set<string>>(new Set());
   const [activeSubtopic, setActiveSubtopic] = useState<string | null>(null);
   const [allViewed, setAllViewed] = useState(false);
+  const [remedialLimitReached, setRemedialLimitReached] = useState(false);
 
   useEffect(() => {
     const state = getState();
@@ -30,8 +32,10 @@ export default function RemedialPage({ params }: PageProps) {
     const t = TOPICS.find((x) => x.id === topicId);
     const p = state.topicProgress[topicId];
     if (!t || !p) { router.push('/map'); return; }
+    const progressionConfig = getTopicProgressionConfig(topicId);
     setTopic(t);
     setProgress(p);
+    setRemedialLimitReached((p.remedialAttempts ?? 0) > progressionConfig.maxRemedialAttempts);
     // Auto-select first weak subtopic
     if (p.weakSubtopics.length > 0) {
       setActiveSubtopic(p.weakSubtopics[0]);
@@ -77,9 +81,15 @@ export default function RemedialPage({ params }: PageProps) {
             <p className="text-slate-400 text-base leading-relaxed">
               We will go through the areas where you need a bit more practice. Take your time!
             </p>
+            {remedialLimitReached && (
+              <p className="text-yellow-400 text-sm mt-2">
+                Maximum remedial rounds reached for this topic. Try assessment again to continue.
+              </p>
+            )}
           </motion.div>
 
           {/* Weak subtopics list */}
+          {!remedialLimitReached && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -112,9 +122,10 @@ export default function RemedialPage({ params }: PageProps) {
               })}
             </div>
           </motion.div>
+          )}
 
           {/* Active content */}
-          {activeSubtopic && content.remedialContent[activeSubtopic] && (
+          {!remedialLimitReached && activeSubtopic && content.remedialContent[activeSubtopic] && (
             <motion.div
               key={activeSubtopic}
               initial={{ opacity: 0, y: 10 }}
@@ -133,7 +144,7 @@ export default function RemedialPage({ params }: PageProps) {
             </motion.div>
           )}
 
-          {activeSubtopic && !content.remedialContent[activeSubtopic] && (
+          {!remedialLimitReached && activeSubtopic && !content.remedialContent[activeSubtopic] && (
             <motion.div
               key={activeSubtopic}
               initial={{ opacity: 0 }}

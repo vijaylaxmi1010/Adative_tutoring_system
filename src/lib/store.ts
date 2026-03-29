@@ -22,6 +22,8 @@ export function getDefaultState(): AppState {
       hintsUsed: 0,
       totalQuestions: 0,
       correctAnswers: 0,
+      assessmentAttempts: 0,
+      remedialAttempts: 0,
       weakSubtopics: [],
     };
   }
@@ -45,6 +47,13 @@ export function getState(): AppState {
     for (const topic of TOPICS) {
       if (!state.topicProgress[topic.id]) {
         state.topicProgress[topic.id] = defaultState.topicProgress[topic.id];
+      } else {
+        state.topicProgress[topic.id] = {
+          ...defaultState.topicProgress[topic.id],
+          ...state.topicProgress[topic.id],
+          assessmentAttempts: state.topicProgress[topic.id].assessmentAttempts ?? 0,
+          remedialAttempts: state.topicProgress[topic.id].remedialAttempts ?? 0,
+        };
       }
     }
     return state;

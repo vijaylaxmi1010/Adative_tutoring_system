@@ -10,6 +10,7 @@ interface HintSystemProps {
   hints: [string, string, string, string];
   hintsUsed: number;
   onHintUsed: (level: number) => void;
+  maxHints?: number;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -21,17 +22,20 @@ const hintLevels = [
   { label: 'Solution', color: 'text-red-400', bg: 'bg-red-400/10 border-red-400/20', icon: '🎯' },
 ];
 
-export default function HintSystem({ hints, hintsUsed, onHintUsed, isOpen, onClose }: HintSystemProps) {
+export default function HintSystem({ hints, hintsUsed, onHintUsed, maxHints = 4, isOpen, onClose }: HintSystemProps) {
+  const effectiveMaxHints = Math.max(1, Math.min(maxHints, hintLevels.length));
   const [confirmFull, setConfirmFull] = useState(false);
   const [revealedLevels, setRevealedLevels] = useState<number[]>(
-    Array.from({ length: hintsUsed }, (_, i) => i)
+    Array.from({ length: Math.min(hintsUsed, effectiveMaxHints) }, (_, i) => i)
   );
 
   const revealHint = (level: number) => {
-    if (level === 3 && !confirmFull) {
+    const isFullSolutionLevel = level === 3 && effectiveMaxHints === hintLevels.length;
+    if (isFullSolutionLevel && !confirmFull) {
       setConfirmFull(true);
       return;
     }
+    if (level >= effectiveMaxHints) return;
     setConfirmFull(false);
     if (!revealedLevels.includes(level)) {
       const newLevels = [...revealedLevels, level];
@@ -75,7 +79,7 @@ export default function HintSystem({ hints, hintsUsed, onHintUsed, isOpen, onClo
 
             {/* Hint levels */}
             <div className="space-y-3">
-              {hintLevels.map((level, i) => {
+              {hintLevels.slice(0, effectiveMaxHints).map((level, i) => {
                 const isRevealed = revealedLevels.includes(i);
                 const isNext = i === nextHintLevel;
                 const isLocked = i > nextHintLevel;

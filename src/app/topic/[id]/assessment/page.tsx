@@ -42,6 +42,7 @@ export default function AssessmentPage({ params }: PageProps) {
   const timeRef = useRef(0);
   const nudgeShownRef = useRef(false);
   const lastHintNudgeMsRef = useRef(0);
+  const assessmentAttemptsRef = useRef(0);
   const questionRef = useRef<Question | null>(null);
   const engagementConfig = getTopicEngagementConfig(topicId);
   const progressionConfig = getTopicProgressionConfig(topicId);
@@ -61,6 +62,7 @@ export default function AssessmentPage({ params }: PageProps) {
       pG: p.pG,
       pS: p.pS,
     });
+    assessmentAttemptsRef.current = p.assessmentAttempts ?? 0;
 
     const qs = QUESTIONS.filter((q) => q.topicId === topicId && !q.isPreAssessment);
     // Shuffle for variety
@@ -146,9 +148,13 @@ export default function AssessmentPage({ params }: PageProps) {
   const finalizeAssessment = useCallback((finalParams: BKTParams, allResponses: QuestionResponse[]) => {
     const correct = allResponses.filter((r) => r.isCorrect).length;
     const totalHints = allResponses.reduce((sum, r) => sum + r.hintsUsed, 0);
-    const passed =
+    const nextAssessmentAttempts = assessmentAttemptsRef.current + 1;
+    const passedByKnowledge =
       finalParams.pL >= progressionConfig.unlockThresholdPL &&
       allResponses.length >= progressionConfig.minQuestionsBeforeMasteryCheck;
+    const forceAdvance = nextAssessmentAttempts >= progressionConfig.maxAttemptsBeforeForceAdvance;
+    const passed =
+      passedByKnowledge || forceAdvance;
 
     const responseByQuestionId = new Map(allResponses.map((response) => [response.questionId, response]));
     const bySubtopic: Record<string, { total: number; correct: number }> = {};
@@ -180,13 +186,14 @@ export default function AssessmentPage({ params }: PageProps) {
       hintsUsed: totalHints,
       totalQuestions: allResponses.length,
       correctAnswers: correct,
+      assessmentAttempts: nextAssessmentAttempts,
       weakSubtopics: derivedWeakSubtopics,
     });
 
     if (passed) {
       unlockNextTopics(topicId);
     }
-  }, [assessmentConfig.remedialThreshold, progressionConfig.minQuestionsBeforeMasteryCheck, progressionConfig.unlockThresholdPL, questions, topicId]);
+  }, [assessmentConfig.remedialThreshold, progressionConfig.maxAttemptsBeforeForceAdvance, progressionConfig.minQuestionsBeforeMasteryCheck, progressionConfig.unlockThresholdPL, questions, topicId]);
 
   if (!bktParams || questions.length === 0) return null;
 
@@ -194,10 +201,14 @@ export default function AssessmentPage({ params }: PageProps) {
   questionRef.current = question;
   const pLPercent = Math.round(bktParams.pL * 100);
   const attemptedCount = phase === 'complete' ? questions.length : responses.length;
+  const assessmentAttemptCount = assessmentAttemptsRef.current + (phase === 'complete' ? 1 : 0);
+  const forceAdvance = assessmentAttemptCount >= progressionConfig.maxAttemptsBeforeForceAdvance;
   const passed =
-    bktParams.pL >= progressionConfig.unlockThresholdPL &&
-    attemptedCount >= progressionConfig.minQuestionsBeforeMasteryCheck;
-  const needsRemedial = bktParams.pL < progressionConfig.remedialTriggerPL;
+    (
+      bktParams.pL >= progressionConfig.unlockThresholdPL &&
+      attemptedCount >= progressionConfig.minQuestionsBeforeMasteryCheck
+    ) || forceAdvance;
+  const needsRemedial = !passed && bktParams.pL < progressionConfig.remedialTriggerPL;
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -419,7 +430,12 @@ export default function AssessmentPage({ params }: PageProps) {
                       variant="primary"
                       size="lg"
                       className="w-full"
-                      onClick={() => router.push(`/topic/${topicId}/remedial`)}
+                      onClick={() => {
+                        updateTopicProgress(topicId, {
+                          remedialAttempts: (getState().topicProgress[topicId]?.remedialAttempts ?? 0) + 1,
+                        });
+                        router.push(`/topic/${topicId}/remedial`);
+                      }}
                     >
                       Review Weak Topics
                     </Button>
@@ -453,6 +469,7 @@ export default function AssessmentPage({ params }: PageProps) {
             hints={question.hints}
             hintsUsed={hintsUsedThisQuestion}
             onHintUsed={setHintsUsedThisQuestion}
+            maxHints={engagementConfig.maxHintsPerQuestion}
             isOpen={isHintOpen}
             onClose={() => setIsHintOpen(false)}
           />

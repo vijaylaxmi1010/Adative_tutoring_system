@@ -10,15 +10,17 @@ interface EmotionDetectorProps {
   isActive: boolean;
   onToggle: () => void;
   hidden?: boolean;
+  alertThresholdFrames?: number;
 }
 
 type Emotion = 'happy' | 'focused' | 'confused' | 'bored';
 
 const MOCK_EMOTIONS: Emotion[] = ['focused', 'happy', 'focused', 'confused', 'focused', 'bored', 'confused'];
 
-export default function EmotionDetector({ onConfusionDetected, isActive, onToggle, hidden }: EmotionDetectorProps) {
+export default function EmotionDetector({ onConfusionDetected, isActive, onToggle, hidden, alertThresholdFrames = 20 }: EmotionDetectorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const confusionFramesRef = useRef(0);
   const [hasCamera, setHasCamera] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [currentEmotion, setCurrentEmotion] = useState<Emotion>('focused');
@@ -40,6 +42,16 @@ export default function EmotionDetector({ onConfusionDetected, isActive, onToggl
       index = (index + 1) % MOCK_EMOTIONS.length;
       const emotion = MOCK_EMOTIONS[index];
       setCurrentEmotion(emotion);
+
+      if (emotion === 'confused') {
+        confusionFramesRef.current += 5;
+      } else {
+        confusionFramesRef.current = Math.max(0, confusionFramesRef.current - 2);
+      }
+
+      if (confusionFramesRef.current < alertThresholdFrames) return;
+
+      confusionFramesRef.current = 0;
       if (emotion === 'confused') {
         if (hidden) {
           onConfusionDetected();
@@ -49,7 +61,7 @@ export default function EmotionDetector({ onConfusionDetected, isActive, onToggl
       }
     }, 8000);
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [alertThresholdFrames, hidden, isActive, onConfusionDetected]);
 
   const startCamera = async () => {
     try {

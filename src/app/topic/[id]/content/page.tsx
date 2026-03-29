@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { getState, saveState } from '@/lib/store';
 import { TOPICS, TOPIC_CONTENT } from '@/lib/mock-data';
+import { getTopicEngagementConfig } from '@/lib/bkt';
 import { use } from 'react';
 import { Topic, TopicProgress, LearningPreference } from '@/types';
 
@@ -75,6 +76,7 @@ export default function ContentPage({ params }: PageProps) {
   };
 
   const content = TOPIC_CONTENT.find((c) => c.topicId === topicId);
+  const engagementConfig = getTopicEngagementConfig(topicId);
 
   if (!topic || !progress || !content || !ready) return null;
 
@@ -208,6 +210,7 @@ export default function ContentPage({ params }: PageProps) {
               <EmotionDetector
                 isActive
                 hidden
+                alertThresholdFrames={engagementConfig.emotionAlertFrames}
                 onToggle={() => {}}
                 onConfusionDetected={handleConfusion}
               />

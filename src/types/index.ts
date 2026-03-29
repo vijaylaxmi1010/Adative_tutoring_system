@@ -65,6 +65,8 @@ export interface TopicProgress {
   hintsUsed: number;
   totalQuestions: number;
   correctAnswers: number;
+  assessmentAttempts: number;
+  remedialAttempts: number;
   weakSubtopics: string[];
   completedAt?: string;
 }

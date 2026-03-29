@@ -81,17 +81,39 @@ export default function FinalReport({ state }: FinalReportProps) {
     (acc, topic) => {
       const progress = state.topicProgress[topic.id];
       if (!progress) return acc;
-      const weight = getTopicProgressionConfig(topic.id).finalScoreWeight;
+      const progressionConfig = getTopicProgressionConfig(topic.id);
+      const weight = progressionConfig.finalScoreWeight;
+
+      const bonusApplies =
+        progress.isCompleted &&
+        progress.hintsUsed === 0 &&
+        (progress.assessmentAttempts ?? 0) === 1;
+      const extraRemedialRounds = Math.max(0, (progress.remedialAttempts ?? 0) - 1);
+
       acc.weightedScoreSum += progress.pL * weight;
+      if (bonusApplies) {
+        acc.weightedBonusSum += progressionConfig.bonusNoHintsFirstAttempt * weight;
+      }
+      acc.weightedPenaltySum += extraRemedialRounds * progressionConfig.penaltyPerExtraRemedialRound * weight;
       acc.weightSum += weight;
       return acc;
     },
-    { weightedScoreSum: 0, weightSum: 0 }
+    { weightedScoreSum: 0, weightedBonusSum: 0, weightedPenaltySum: 0, weightSum: 0 }
   );
 
   const overallScore =
     weightedTotals.weightSum > 0
-      ? Math.round((weightedTotals.weightedScoreSum / weightedTotals.weightSum) * 100)
+      ? Math.round(
+          Math.max(
+            0,
+            Math.min(
+              100,
+              ((weightedTotals.weightedScoreSum + weightedTotals.weightedBonusSum - weightedTotals.weightedPenaltySum) /
+                weightedTotals.weightSum) *
+                100
+            )
+          )
+        )
       : 0;
 
   const completedCount = progresses.filter((p) => p.isCompleted).length;
