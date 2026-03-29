@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { BookOpen, Play, ChevronRight, ChevronLeft } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { TopicContent } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +33,25 @@ export default function ContentPlayer({
   onContentCompletedRef.current = onContentCompleted;
 
   const textContent = isRevision ? content.revisionContent : content.textContent;
+
+  const markdownComponents = {
+    h1: ({ children }: any) => <h1 className="text-2xl font-bold text-white mb-3">{children}</h1>,
+    h2: ({ children }: any) => <h2 className="text-xl font-semibold text-white mb-3">{children}</h2>,
+    h3: ({ children }: any) => <h3 className="text-lg font-semibold text-white mb-2">{children}</h3>,
+    p: ({ children }: any) => <p className="text-slate-300 text-sm leading-relaxed">{children}</p>,
+    ul: ({ children }: any) => <ul className="list-disc list-inside space-y-1 text-slate-300 text-sm">{children}</ul>,
+    ol: ({ children }: any) => <ol className="list-decimal list-inside space-y-1 text-slate-300 text-sm">{children}</ol>,
+    li: ({ children }: any) => <li>{children}</li>,
+    strong: ({ children }: any) => <strong className="text-white font-semibold">{children}</strong>,
+    em: ({ children }: any) => <em className="italic">{children}</em>,
+    code: ({ children }: any) => (
+      <code className="bg-slate-800/80 text-amber-300 rounded px-1 py-0.5 text-xs">{children}</code>
+    ),
+    hr: () => <hr className="border-slate-600 my-3" />,
+    blockquote: ({ children }: any) => (
+      <blockquote className="border-l-2 border-indigo-400 pl-3 italic text-slate-300">{children}</blockquote>
+    ),
+  };
 
   // ── Text mode: track which sections have been visited ──────────────────────
   const goToSection = (idx: number, totalSections: number) => {
@@ -120,7 +140,7 @@ export default function ContentPlayer({
       playerRef.current?.destroy?.();
       playerRef.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preference, content.videoUrl]);
 
   // ── Video render ───────────────────────────────────────────────────────────
@@ -178,8 +198,8 @@ export default function ContentPlayer({
                   section === i
                     ? 'bg-indigo-600 text-white'
                     : isVisited
-                    ? 'bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600/50'
-                    : 'bg-slate-700/60 text-slate-400 hover:text-white hover:bg-slate-700'
+                      ? 'bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600/50'
+                      : 'bg-slate-700/60 text-slate-400 hover:text-white hover:bg-slate-700'
                 )}
               >
                 {isVisited && section !== i && <span className="text-emerald-400">✓</span>}
@@ -202,46 +222,13 @@ export default function ContentPlayer({
           <>
             <h3 className="text-lg font-bold text-white mb-4">{sections[section].title}</h3>
             <div className="text-slate-300 text-sm leading-relaxed space-y-3">
-              {sections[section].body.split('\n').map((line, i) => {
-                if (line.startsWith('**') && line.endsWith('**')) {
-                  return (
-                    <p key={i} className="font-semibold text-yellow-400">
-                      {line.replace(/\*\*/g, '')}
-                    </p>
-                  );
-                }
-                if (line.startsWith('- ')) {
-                  return (
-                    <div key={i} className="flex items-start gap-2">
-                      <span className="text-indigo-400 mt-1">•</span>
-                      <span>{line.substring(2)}</span>
-                    </div>
-                  );
-                }
-                if (line.match(/^\d+\. /)) {
-                  const num = line.match(/^(\d+)\. /)?.[1];
-                  return (
-                    <div key={i} className="flex items-start gap-2">
-                      <span className="text-indigo-400 font-mono text-xs mt-1 flex-shrink-0">
-                        {num}.
-                      </span>
-                      <span>{line.replace(/^\d+\. /, '')}</span>
-                    </div>
-                  );
-                }
-                if (line.trim() === '') return <div key={i} className="h-2" />;
-                const boldFormatted = line.split(/(\*\*[^*]+\*\*)/).map((part, j) => {
-                  if (part.startsWith('**') && part.endsWith('**')) {
-                    return <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
-                  }
-                  return part;
-                });
-                return <p key={i}>{boldFormatted}</p>;
-              })}
+              <ReactMarkdown components={markdownComponents}>{sections[section].body}</ReactMarkdown>
             </div>
           </>
         ) : (
-          <p className="text-slate-300">{textContent}</p>
+          <div className="space-y-3">
+            <ReactMarkdown components={markdownComponents}>{textContent}</ReactMarkdown>
+          </div>
         )}
       </motion.div>
 
