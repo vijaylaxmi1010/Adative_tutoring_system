@@ -33,6 +33,7 @@ type EngagementConfig = {
 
 type ProgressionConfig = {
   remedialTriggerPL: number;
+  minQuestionsBeforeMasteryCheck: number;
   maxRemedialAttempts: number;
   unlockThresholdPL: number;
   maxAttemptsBeforeForceAdvance: number;
@@ -94,16 +95,16 @@ const TOPIC_ENGAGEMENT_CONFIG: Record<string, EngagementConfig> = {
 };
 
 const TOPIC_PROGRESSION_CONFIG: Record<string, ProgressionConfig> = {
-  'LA-01': { remedialTriggerPL: 0.5, maxRemedialAttempts: 2, unlockThresholdPL: 0.85, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 10, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
-  'LA-02': { remedialTriggerPL: 0.5, maxRemedialAttempts: 2, unlockThresholdPL: 0.85, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 12, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
-  'LA-03': { remedialTriggerPL: 0.45, maxRemedialAttempts: 2, unlockThresholdPL: 0.8, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 10, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
-  'LA-04': { remedialTriggerPL: 0.45, maxRemedialAttempts: 2, unlockThresholdPL: 0.8, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 12, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
-  'LA-05': { remedialTriggerPL: 0.45, maxRemedialAttempts: 2, unlockThresholdPL: 0.82, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 10, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
-  'PC-01': { remedialTriggerPL: 0.45, maxRemedialAttempts: 2, unlockThresholdPL: 0.82, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 10, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
-  'PC-02': { remedialTriggerPL: 0.4, maxRemedialAttempts: 2, unlockThresholdPL: 0.8, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 12, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
-  'PC-03': { remedialTriggerPL: 0.4, maxRemedialAttempts: 2, unlockThresholdPL: 0.78, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 12, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
-  'PC-04': { remedialTriggerPL: 0.4, maxRemedialAttempts: 2, unlockThresholdPL: 0.78, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 12, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
-  'PC-05': { remedialTriggerPL: 0.35, maxRemedialAttempts: 2, unlockThresholdPL: 0.75, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 10, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
+  'LA-01': { remedialTriggerPL: 0.5, minQuestionsBeforeMasteryCheck: 5, maxRemedialAttempts: 2, unlockThresholdPL: 0.85, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 10, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
+  'LA-02': { remedialTriggerPL: 0.5, minQuestionsBeforeMasteryCheck: 6, maxRemedialAttempts: 2, unlockThresholdPL: 0.85, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 12, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
+  'LA-03': { remedialTriggerPL: 0.45, minQuestionsBeforeMasteryCheck: 6, maxRemedialAttempts: 2, unlockThresholdPL: 0.8, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 10, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
+  'LA-04': { remedialTriggerPL: 0.45, minQuestionsBeforeMasteryCheck: 7, maxRemedialAttempts: 2, unlockThresholdPL: 0.8, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 12, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
+  'LA-05': { remedialTriggerPL: 0.45, minQuestionsBeforeMasteryCheck: 6, maxRemedialAttempts: 2, unlockThresholdPL: 0.82, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 10, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
+  'PC-01': { remedialTriggerPL: 0.45, minQuestionsBeforeMasteryCheck: 6, maxRemedialAttempts: 2, unlockThresholdPL: 0.82, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 10, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
+  'PC-02': { remedialTriggerPL: 0.4, minQuestionsBeforeMasteryCheck: 7, maxRemedialAttempts: 2, unlockThresholdPL: 0.8, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 12, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
+  'PC-03': { remedialTriggerPL: 0.4, minQuestionsBeforeMasteryCheck: 7, maxRemedialAttempts: 2, unlockThresholdPL: 0.78, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 12, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
+  'PC-04': { remedialTriggerPL: 0.4, minQuestionsBeforeMasteryCheck: 8, maxRemedialAttempts: 2, unlockThresholdPL: 0.78, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 12, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
+  'PC-05': { remedialTriggerPL: 0.35, minQuestionsBeforeMasteryCheck: 8, maxRemedialAttempts: 2, unlockThresholdPL: 0.75, maxAttemptsBeforeForceAdvance: 4, finalScoreWeight: 10, bonusNoHintsFirstAttempt: 0.05, penaltyPerExtraRemedialRound: 0.02 },
 };
 
 export function getTopicBKTDefaults(topicId: string): BKTCoreDefaults {
@@ -129,6 +130,7 @@ export function getTopicEngagementConfig(topicId: string): EngagementConfig {
 export function getTopicProgressionConfig(topicId: string): ProgressionConfig {
   return TOPIC_PROGRESSION_CONFIG[topicId] ?? {
     remedialTriggerPL: 0.5,
+    minQuestionsBeforeMasteryCheck: 5,
     maxRemedialAttempts: 2,
     unlockThresholdPL: 0.8,
     maxAttemptsBeforeForceAdvance: 4,

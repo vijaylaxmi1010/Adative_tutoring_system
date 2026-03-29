@@ -146,7 +146,9 @@ export default function AssessmentPage({ params }: PageProps) {
   const finalizeAssessment = useCallback((finalParams: BKTParams, allResponses: QuestionResponse[]) => {
     const correct = allResponses.filter((r) => r.isCorrect).length;
     const totalHints = allResponses.reduce((sum, r) => sum + r.hintsUsed, 0);
-    const passed = finalParams.pL >= progressionConfig.unlockThresholdPL;
+    const passed =
+      finalParams.pL >= progressionConfig.unlockThresholdPL &&
+      allResponses.length >= progressionConfig.minQuestionsBeforeMasteryCheck;
 
     const responseByQuestionId = new Map(allResponses.map((response) => [response.questionId, response]));
     const bySubtopic: Record<string, { total: number; correct: number }> = {};
@@ -184,14 +186,17 @@ export default function AssessmentPage({ params }: PageProps) {
     if (passed) {
       unlockNextTopics(topicId);
     }
-  }, [assessmentConfig.remedialThreshold, progressionConfig.unlockThresholdPL, questions, topicId]);
+  }, [assessmentConfig.remedialThreshold, progressionConfig.minQuestionsBeforeMasteryCheck, progressionConfig.unlockThresholdPL, questions, topicId]);
 
   if (!bktParams || questions.length === 0) return null;
 
   const question = questions[currentIndex];
   questionRef.current = question;
   const pLPercent = Math.round(bktParams.pL * 100);
-  const passed = bktParams.pL >= progressionConfig.unlockThresholdPL;
+  const attemptedCount = phase === 'complete' ? questions.length : responses.length;
+  const passed =
+    bktParams.pL >= progressionConfig.unlockThresholdPL &&
+    attemptedCount >= progressionConfig.minQuestionsBeforeMasteryCheck;
   const needsRemedial = bktParams.pL < progressionConfig.remedialTriggerPL;
 
   return (
@@ -221,13 +226,12 @@ export default function AssessmentPage({ params }: PageProps) {
                     {questions.map((_, i) => (
                       <div
                         key={i}
-                        className={`h-1.5 rounded-full transition-all duration-300 ${
-                          i < currentIndex
+                        className={`h-1.5 rounded-full transition-all duration-300 ${i < currentIndex
                             ? 'w-6 bg-emerald-500'
                             : i === currentIndex
-                            ? 'w-6 bg-indigo-500 animate-pulse'
-                            : 'w-4 bg-slate-700'
-                        }`}
+                              ? 'w-6 bg-indigo-500 animate-pulse'
+                              : 'w-4 bg-slate-700'
+                          }`}
                       />
                     ))}
                   </div>
@@ -257,8 +261,8 @@ export default function AssessmentPage({ params }: PageProps) {
                     <span className={cn(
                       'text-xs px-2.5 py-1 rounded-full font-medium',
                       question.difficulty === 'easy' ? 'bg-emerald-500/20 text-emerald-400' :
-                      question.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                      'bg-red-500/20 text-red-400'
+                        question.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-red-500/20 text-red-400'
                     )}>
                       {question.difficulty}
                     </span>
@@ -277,9 +281,8 @@ export default function AssessmentPage({ params }: PageProps) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className={`absolute inset-0 flex items-center justify-center rounded-2xl z-20 backdrop-blur-sm ${
-                          currentResponse.isCorrect ? 'bg-emerald-900/80' : 'bg-red-900/80'
-                        }`}
+                        className={`absolute inset-0 flex items-center justify-center rounded-2xl z-20 backdrop-blur-sm ${currentResponse.isCorrect ? 'bg-emerald-900/80' : 'bg-red-900/80'
+                          }`}
                       >
                         <div className="text-center">
                           {currentResponse.isCorrect ? (
@@ -369,11 +372,10 @@ export default function AssessmentPage({ params }: PageProps) {
                 {responses.map((r, i) => (
                   <div
                     key={i}
-                    className={`p-3 rounded-xl border text-sm font-bold ${
-                      r.isCorrect
+                    className={`p-3 rounded-xl border text-sm font-bold ${r.isCorrect
                         ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
                         : 'bg-red-500/15 border-red-500/40 text-red-400'
-                    }`}
+                      }`}
                   >
                     Q{i + 1}<br />
                     <span className="text-xs font-normal">{r.isCorrect ? '✓' : '✗'}</span>
