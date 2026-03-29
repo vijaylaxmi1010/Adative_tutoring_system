@@ -89,7 +89,7 @@ export interface AppState {
 export interface TopicContent {
   topicId: string;
   textContent: string;
-  videoUrl: string;
+  videoUrl: string[];
   revisionContent: string;
   remedialContent: Record<string, string>;
 }

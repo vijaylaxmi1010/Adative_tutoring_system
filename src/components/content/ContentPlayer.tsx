@@ -27,10 +27,14 @@ export default function ContentPlayer({
   const [section, setSection] = useState(0);
   const visitedRef = useRef<Set<number>>(new Set([0]));
   const [visitedCount, setVisitedCount] = useState(1);
+  const [videoIndex, setVideoIndex] = useState(0);
   const ytContainerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const onContentCompletedRef = useRef(onContentCompleted);
   onContentCompletedRef.current = onContentCompleted;
+
+  const videos = content.videoUrl;
+  const currentVideoUrl = videos[videoIndex] ?? '';
 
   const textContent = isRevision ? content.revisionContent : content.textContent;
 
@@ -96,7 +100,7 @@ export default function ContentPlayer({
   useEffect(() => {
     if (preference !== 'video') return;
 
-    const videoId = content.videoUrl.match(/\/embed\/([^?&]+)/)?.[1];
+    const videoId = currentVideoUrl.match(/\/embed\/([^?&]+)/)?.[1];
     if (!videoId) return;
 
     let destroyed = false;
@@ -112,7 +116,11 @@ export default function ContentPlayer({
           onStateChange: (e: any) => {
             // YT.PlayerState.ENDED === 0
             if (e.data === 0) {
-              onContentCompletedRef.current?.();
+              if (videoIndex < videos.length - 1) {
+                setVideoIndex((i) => i + 1);
+              } else {
+                onContentCompletedRef.current?.();
+              }
             }
           },
         },
@@ -141,7 +149,7 @@ export default function ContentPlayer({
       playerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preference, content.videoUrl]);
+  }, [preference, currentVideoUrl, videoIndex]);
 
   // ── Video render ───────────────────────────────────────────────────────────
   if (preference === 'video') {
@@ -156,6 +164,29 @@ export default function ContentPlayer({
             Switch to text version
           </button>
         </div>
+
+        {/* Video counter for multi-video topics */}
+        {videos.length > 1 && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-400">Video {videoIndex + 1} of {videos.length}</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setVideoIndex((i) => Math.max(0, i - 1))}
+                disabled={videoIndex === 0}
+                className="flex items-center gap-1 text-xs text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
+              >
+                <ChevronLeft size={14} /> Prev
+              </button>
+              <button
+                onClick={() => setVideoIndex((i) => Math.min(videos.length - 1, i + 1))}
+                disabled={videoIndex === videos.length - 1}
+                className="flex items-center gap-1 text-xs text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
+              >
+                Next <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* YT Player mounts into this div */}
         <div className="relative rounded-2xl overflow-hidden bg-black aspect-video shadow-2xl border border-slate-700">
