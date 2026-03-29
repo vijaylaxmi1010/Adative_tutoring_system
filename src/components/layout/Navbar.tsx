@@ -28,7 +28,7 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-700/50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-8 sm:px-12 lg:px-16">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div
@@ -42,7 +42,7 @@ export default function Navbar() {
           </div>
 
           {/* Progress */}
-          <div className="hidden sm:flex items-center gap-3 flex-1 max-w-xs mx-8">
+          <div className="hidden sm:flex items-center gap-3 flex-1 max-w-sm mx-10">
             <span className="text-xs text-slate-400 whitespace-nowrap">Overall</span>
             <ProgressBar value={progress} size="sm" color="indigo" />
             <span className="text-xs text-slate-300 font-medium whitespace-nowrap">

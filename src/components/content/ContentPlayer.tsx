@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { BookOpen, Play, ChevronRight, ChevronLeft } from 'lucide-react';
 import { TopicContent } from '@/types';
@@ -11,6 +11,7 @@ interface ContentPlayerProps {
   preference: 'video' | 'text';
   isRevision?: boolean;
   onTogglePreference: () => void;
+  onContentCompleted?: () => void;
 }
 
 export default function ContentPlayer({
@@ -18,10 +19,30 @@ export default function ContentPlayer({
   preference,
   isRevision,
   onTogglePreference,
+  onContentCompleted,
 }: ContentPlayerProps) {
   const [section, setSection] = useState(0);
+  const visitedRef = useRef<Set<number>>(new Set([0]));
+  const [visitedCount, setVisitedCount] = useState(1);
+  const ytContainerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<any>(null);
+  const onContentCompletedRef = useRef(onContentCompleted);
+  onContentCompletedRef.current = onContentCompleted;
 
   const textContent = isRevision ? content.revisionContent : content.textContent;
+
+  // ── Text mode: track which sections have been visited ──────────────────────
+  const goToSection = (idx: number, totalSections: number) => {
+    const wasNew = !visitedRef.current.has(idx);
+    visitedRef.current.add(idx);
+    setSection(idx);
+    if (wasNew) {
+      setVisitedCount(visitedRef.current.size);
+      if (visitedRef.current.size >= totalSections) {
+        onContentCompletedRef.current?.();
+      }
+    }
+  };
 
   // Parse markdown-ish content into sections
   const sections = textContent
@@ -34,10 +55,69 @@ export default function ContentPlayer({
       return { title, body };
     });
 
+  // Single-section text: student sees everything on load — unlock immediately
+  useEffect(() => {
+    if (preference === 'text' && sections.length <= 1) {
+      onContentCompletedRef.current?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preference, sections.length]);
+
+  // ── Video mode: YouTube IFrame API — fire when video ends ──────────────────
+  useEffect(() => {
+    if (preference !== 'video') return;
+
+    const videoId = content.videoUrl.match(/\/embed\/([^?&]+)/)?.[1];
+    if (!videoId) return;
+
+    let destroyed = false;
+
+    const createPlayer = () => {
+      if (destroyed || !ytContainerRef.current) return;
+      playerRef.current = new (window as any).YT.Player(ytContainerRef.current, {
+        height: '100%',
+        width: '100%',
+        videoId,
+        playerVars: { rel: 0, modestbranding: 1 },
+        events: {
+          onStateChange: (e: any) => {
+            // YT.PlayerState.ENDED === 0
+            if (e.data === 0) {
+              onContentCompletedRef.current?.();
+            }
+          },
+        },
+      });
+    };
+
+    if ((window as any).YT?.Player) {
+      createPlayer();
+    } else {
+      // Chain on any previously registered callback so multiple topics don't clash
+      const prev = (window as any).onYouTubeIframeAPIReady;
+      (window as any).onYouTubeIframeAPIReady = () => {
+        prev?.();
+        createPlayer();
+      };
+      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      }
+    }
+
+    return () => {
+      destroyed = true;
+      playerRef.current?.destroy?.();
+      playerRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preference, content.videoUrl]);
+
+  // ── Video render ───────────────────────────────────────────────────────────
   if (preference === 'video') {
     return (
       <div className="space-y-4">
-        {/* Toggle */}
         <div className="flex items-center gap-2">
           <button
             onClick={onTogglePreference}
@@ -48,29 +128,23 @@ export default function ContentPlayer({
           </button>
         </div>
 
-        {/* Video embed */}
+        {/* YT Player mounts into this div */}
         <div className="relative rounded-2xl overflow-hidden bg-black aspect-video shadow-2xl border border-slate-700">
-          <iframe
-            src={content.videoUrl}
-            title="Learning video"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="w-full h-full"
-          />
+          <div ref={ytContainerRef} className="w-full h-full" />
         </div>
 
         <div className="p-4 bg-slate-700/30 rounded-xl border border-slate-700/50">
           <p className="text-sm text-slate-400">
-            Watch the full video, then click &quot;I&apos;m Ready for Assessment&quot; below.
+            🎬 Watch the full video — the assessment button unlocks automatically when the video ends.
           </p>
         </div>
       </div>
     );
   }
 
+  // ── Text render ────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* Toggle */}
       <div className="flex items-center gap-2">
         <button
           onClick={onTogglePreference}
@@ -81,27 +155,33 @@ export default function ContentPlayer({
         </button>
       </div>
 
-      {/* Section nav */}
+      {/* Section tabs */}
       {sections.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap">
-          {sections.map((s, i) => (
-            <button
-              key={i}
-              onClick={() => setSection(i)}
-              className={cn(
-                'px-3 py-1 rounded-lg text-xs font-medium transition-colors',
-                section === i
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-700/60 text-slate-400 hover:text-white hover:bg-slate-700'
-              )}
-            >
-              {s.title.length > 20 ? s.title.substring(0, 20) + '...' : s.title}
-            </button>
-          ))}
+          {sections.map((s, i) => {
+            const isVisited = visitedCount >= 0 && visitedRef.current.has(i);
+            return (
+              <button
+                key={i}
+                onClick={() => goToSection(i, sections.length)}
+                className={cn(
+                  'px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5',
+                  section === i
+                    ? 'bg-indigo-600 text-white'
+                    : isVisited
+                    ? 'bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600/50'
+                    : 'bg-slate-700/60 text-slate-400 hover:text-white hover:bg-slate-700'
+                )}
+              >
+                {isVisited && section !== i && <span className="text-emerald-400">✓</span>}
+                {s.title.length > 20 ? s.title.substring(0, 20) + '...' : s.title}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Content */}
+      {/* Section content */}
       <motion.div
         key={section}
         initial={{ opacity: 0, x: 20 }}
@@ -129,7 +209,7 @@ export default function ContentPlayer({
                     </div>
                   );
                 }
-                if (line.startsWith('1. ') || line.startsWith('2. ') || line.match(/^\d+\. /)) {
+                if (line.match(/^\d+\. /)) {
                   const num = line.match(/^(\d+)\. /)?.[1];
                   return (
                     <div key={i} className="flex items-start gap-2">
@@ -141,7 +221,6 @@ export default function ContentPlayer({
                   );
                 }
                 if (line.trim() === '') return <div key={i} className="h-2" />;
-                // Handle inline bold
                 const boldFormatted = line.split(/(\*\*[^*]+\*\*)/).map((part, j) => {
                   if (part.startsWith('**') && part.endsWith('**')) {
                     return <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
@@ -153,17 +232,15 @@ export default function ContentPlayer({
             </div>
           </>
         ) : (
-          <div className="prose prose-invert prose-sm max-w-none">
-            <p className="text-slate-300">{textContent}</p>
-          </div>
+          <p className="text-slate-300">{textContent}</p>
         )}
       </motion.div>
 
-      {/* Prev/Next section */}
+      {/* Prev / Next navigation */}
       {sections.length > 1 && (
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center">
           <button
-            onClick={() => setSection(Math.max(0, section - 1))}
+            onClick={() => goToSection(Math.max(0, section - 1), sections.length)}
             disabled={section === 0}
             className="flex items-center gap-1 text-sm text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
           >
@@ -174,7 +251,7 @@ export default function ContentPlayer({
             {section + 1} / {sections.length}
           </span>
           <button
-            onClick={() => setSection(Math.min(sections.length - 1, section + 1))}
+            onClick={() => goToSection(Math.min(sections.length - 1, section + 1), sections.length)}
             disabled={section === sections.length - 1}
             className="flex items-center gap-1 text-sm text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
           >

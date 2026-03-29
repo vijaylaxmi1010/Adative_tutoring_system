@@ -26,15 +26,15 @@ export default function ConceptMap({ topicProgress }: ConceptMapProps) {
 
   return (
     <div className="w-full h-full overflow-auto">
-      <div className="min-w-[700px] min-h-full flex flex-col items-center justify-start py-8 px-6 gap-5">
+      <div className="w-full min-h-full flex flex-col items-center justify-start py-10 px-4 gap-8">
         {LAYERS.map(({ layer, topicIds }) => (
-          <div key={layer} className="flex items-center gap-8 justify-center w-full">
-            {/* Layer label */}
-            <div className="text-[10px] text-slate-600 font-semibold w-8 text-right flex-shrink-0 uppercase tracking-widest">
+          <div key={layer} className="relative flex items-center justify-center w-full">
+            {/* Layer label — absolutely positioned so nodes stay perfectly centered */}
+            <div className="absolute left-4 text-[11px] text-slate-600 font-bold uppercase tracking-widest select-none">
               L{layer}
             </div>
 
-            <div className="flex items-center gap-10 flex-1 justify-center">
+            <div className="flex items-center gap-12">
               {topicIds.map((id) => {
                 const topic = topicMap[id];
                 const progress = topicProgress[id];
@@ -51,8 +51,6 @@ export default function ConceptMap({ topicProgress }: ConceptMapProps) {
                 );
               })}
             </div>
-
-            <div className="w-8 flex-shrink-0" />
           </div>
         ))}
       </div>

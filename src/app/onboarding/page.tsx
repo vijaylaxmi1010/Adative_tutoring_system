@@ -40,8 +40,8 @@ export default function OnboardingPage() {
   if (!student) return null;
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4">
-      <div className="w-full max-w-2xl">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center px-8">
+      <div className="w-full max-w-3xl">
         {/* Welcome phase */}
         {phase === 'welcome' && (
           <motion.div

@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Star, Zap, Trophy, ArrowRight, Play } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
-import { getState, setStudent } from '@/lib/store';
+import { getState, setStudent, clearState } from '@/lib/store';
 import { generateId } from '@/lib/utils';
 import { StudentProfile } from '@/types';
 
@@ -52,6 +52,7 @@ export default function LandingPage() {
       return;
     }
     setLoading(true);
+    clearState(); // wipe all previous student data before creating a new session
     const student: StudentProfile = {
       id: generateId(),
       name: form.name.trim(),
@@ -77,7 +78,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900 geo-bg relative overflow-hidden">
+    <div className="min-h-screen bg-slate-900 geo-bg relative overflow-x-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/40 via-slate-900 to-purple-950/30 pointer-events-none" />
 
@@ -125,7 +126,7 @@ export default function LandingPage() {
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Nav */}
-        <nav className="px-8 py-6 flex items-center justify-between">
+        <nav className="px-10 py-7 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
               <BookOpen size={18} className="text-white" />
@@ -145,14 +146,15 @@ export default function LandingPage() {
         </nav>
 
         {/* Hero */}
-        <main className="flex-1 flex flex-col items-center justify-center px-6 text-center py-16">
+        <main className="flex-1 flex flex-col items-center justify-center px-10 text-center py-28">
           {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
+            className="mb-10"
           >
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-sm font-medium mb-6">
+            <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-sm font-medium">
               <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
               Grade 6 Geometry · Adaptive AI Tutor
             </span>
@@ -162,7 +164,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight"
+            className="text-5xl sm:text-6xl lg:text-7xl font-black text-white mb-10 leading-tight"
           >
             Learn Geometry
             <br />
@@ -173,10 +175,10 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-slate-400 text-xl max-w-2xl mb-10 leading-relaxed"
+            className="text-slate-400 text-xl max-w-2xl mb-16 leading-relaxed"
           >
-            An adaptive tutoring system that learns how you learn. Powered by Bayesian Knowledge
-            Tracing to give you the perfect challenge — not too hard, not too easy.
+            An adaptive tutoring system that learns how you learn. It gives you the perfect
+            challenge — not too hard, not too easy — so you always keep improving!
           </motion.p>
 
           {/* CTA buttons */}
@@ -184,7 +186,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-4 mb-16"
+            className="flex flex-col sm:flex-row gap-5 mb-24"
           >
             {returningStudent ? (
               <>
@@ -210,18 +212,18 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-5xl w-full"
           >
             {features.map((f, i) => (
               <div
                 key={i}
-                className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl p-5 text-left"
+                className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl p-10 text-left"
               >
-                <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-3">
+                <div className="w-14 h-14 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-6">
                   {f.icon}
                 </div>
-                <h3 className="font-bold text-white text-sm mb-1">{f.title}</h3>
-                <p className="text-slate-400 text-sm">{f.desc}</p>
+                <h3 className="font-bold text-white text-base mb-3">{f.title}</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </motion.div>
@@ -231,17 +233,17 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.6 }}
-            className="mt-12 flex items-center gap-8 text-center"
+            className="mt-20 flex items-center gap-20 text-center"
           >
             {[
               { num: '10', label: 'Topics' },
               { num: '100+', label: 'Questions' },
               { num: '4-Level', label: 'Hints' },
-              { num: 'BKT', label: 'AI Engine' },
+              { num: 'Smart', label: 'AI System' },
             ].map((stat) => (
               <div key={stat.label}>
-                <p className="text-2xl font-black text-white">{stat.num}</p>
-                <p className="text-xs text-slate-500">{stat.label}</p>
+                <p className="text-3xl font-black text-white mb-2">{stat.num}</p>
+                <p className="text-sm text-slate-500 tracking-wide">{stat.label}</p>
               </div>
             ))}
           </motion.div>

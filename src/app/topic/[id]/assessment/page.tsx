@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Lightbulb, CheckCircle, XCircle, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Lightbulb, CheckCircle, XCircle } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import QuestionCard from '@/components/assessment/QuestionCard';
 import HintSystem from '@/components/assessment/HintSystem';
@@ -14,7 +14,7 @@ import { getState, updateTopicProgress, addResponse, unlockNextTopics } from '@/
 import { QUESTIONS } from '@/lib/mock-data';
 import { updateBKT } from '@/lib/bkt';
 import { use } from 'react';
-import { Question, QuestionResponse, BKTParams, TopicProgress } from '@/types';
+import { Question, QuestionResponse, BKTParams } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface PageProps {
@@ -38,9 +38,7 @@ export default function AssessmentPage({ params }: PageProps) {
   const [timerRunning, setTimerRunning] = useState(true);
   const [bktParams, setBktParams] = useState<BKTParams | null>(null);
   const [phase, setPhase] = useState<AssessmentPhase>('questions');
-  const [previousPL, setPreviousPL] = useState(0);
   const [weakSubtopics, setWeakSubtopics] = useState<string[]>([]);
-  const [progress, setProgress] = useState<TopicProgress | null>(null);
   const timeRef = useRef(0);
 
   useEffect(() => {
@@ -49,7 +47,6 @@ export default function AssessmentPage({ params }: PageProps) {
     const p = state.topicProgress[topicId];
     if (!p?.isUnlocked) { router.push('/map'); return; }
 
-    setProgress(p);
     setBktParams({
       topicId,
       pL: p.pL,
@@ -77,7 +74,6 @@ export default function AssessmentPage({ params }: PageProps) {
     setTimerRunning(false);
 
     // Update BKT
-    setPreviousPL(bktParams.pL);
     const updatedParams = updateBKT({
       params: bktParams,
       isCorrect,
@@ -154,18 +150,17 @@ export default function AssessmentPage({ params }: PageProps) {
 
   const question = questions[currentIndex];
   const pLPercent = Math.round(bktParams.pL * 100);
-  const prevPercent = Math.round(previousPL * 100);
   const passed = bktParams.pL >= 0.7;
 
   return (
     <div className="min-h-screen bg-slate-900">
       <Navbar />
-      <main className="pt-20 pb-12">
-        <div className={cn('max-w-2xl mx-auto px-4 sm:px-6', isHintOpen && 'mr-80')}>
+      <main className="pt-24 pb-16">
+        <div className={cn('mx-auto px-8 sm:px-12 transition-all duration-300', isHintOpen ? 'max-w-3xl mr-80' : 'max-w-4xl')}>
           {/* Back */}
           <button
             onClick={() => router.push(`/topic/${topicId}`)}
-            className="flex items-center gap-2 text-slate-400 hover:text-white mb-5 transition-colors"
+            className="flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors text-sm"
           >
             <ArrowLeft size={16} />
             Back to Topic
@@ -197,15 +192,6 @@ export default function AssessmentPage({ params }: PageProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* BKT P(L) display */}
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700">
-                    <CircularProgress value={pLPercent} size={28} strokeWidth={3} showLabel={false} />
-                    <div>
-                      <p className="text-xs text-slate-400 leading-none">P(L)</p>
-                      <p className="text-sm font-bold text-white leading-none">{pLPercent}%</p>
-                    </div>
-                  </div>
-
                   <Timer
                     avgTimeSeconds={question.avgTimeSeconds}
                     onTimeUpdate={handleTimeUpdate}
@@ -221,7 +207,7 @@ export default function AssessmentPage({ params }: PageProps) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -30 }}
                   transition={{ duration: 0.3 }}
-                  className="relative bg-slate-800 rounded-2xl border border-slate-700/50 p-6 shadow-xl"
+                  className="relative bg-slate-800 rounded-2xl border border-slate-700/50 p-8 shadow-xl"
                 >
                   {/* Difficulty badge */}
                   <div className="flex items-center gap-2 mb-3">
@@ -234,13 +220,10 @@ export default function AssessmentPage({ params }: PageProps) {
                       {question.difficulty}
                     </span>
                     <span className="text-xs text-slate-500">{question.subtopic}</span>
-                    <span className="text-xs text-slate-600">
-                      ~{question.avgTimeSeconds}s avg
-                    </span>
                   </div>
 
                   {/* Question text */}
-                  <h2 className="text-xl font-bold text-white mb-5 leading-snug">
+                  <h2 className="text-2xl font-bold text-white mb-8 leading-snug">
                     {question.text}
                   </h2>
 
@@ -264,17 +247,6 @@ export default function AssessmentPage({ params }: PageProps) {
                           <p className={`font-bold text-xl mb-1 ${currentResponse.isCorrect ? 'text-emerald-300' : 'text-red-300'}`}>
                             {currentResponse.isCorrect ? 'Correct!' : 'Incorrect'}
                           </p>
-                          <div className="flex items-center justify-center gap-2 mt-2">
-                            <TrendingUp size={14} className="text-slate-400" />
-                            <span className="text-sm text-slate-300">
-                              P(L): {prevPercent}% → {pLPercent}%
-                              {bktParams.pL > previousPL ? (
-                                <span className="text-emerald-400 ml-1">↑</span>
-                              ) : (
-                                <span className="text-red-400 ml-1">↓</span>
-                              )}
-                            </span>
-                          </div>
                           {!currentResponse.isCorrect && (
                             <p className="text-xs text-slate-400 mt-2 max-w-xs mx-auto px-4">
                               {question.explanation}
@@ -340,13 +312,13 @@ export default function AssessmentPage({ params }: PageProps) {
               </h2>
 
               <p className="text-slate-400 mb-2">
-                Final Knowledge Score: <strong className={passed ? 'text-emerald-400' : 'text-yellow-400'}>{pLPercent}%</strong>
+                Your Score: <strong className={passed ? 'text-emerald-400' : 'text-yellow-400'}>{pLPercent}%</strong>
               </p>
               <p className="text-slate-400 mb-1">
                 {responses.filter((r) => r.isCorrect).length}/{responses.length} correct answers
               </p>
               <p className="text-slate-400 mb-6">
-                Total hints used: {responses.reduce((sum, r) => sum + r.hintsUsed, 0)}
+                Hints used: {responses.reduce((sum, r) => sum + r.hintsUsed, 0)}
               </p>
 
               {/* Score breakdown */}

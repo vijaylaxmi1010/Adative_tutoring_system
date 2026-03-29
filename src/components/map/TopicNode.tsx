@@ -55,8 +55,8 @@ export default function TopicNode({ topic, progress, onClick, index = 0 }: Topic
       whileTap={!isLocked ? { scale: 0.97 } : {}}
       onClick={!isLocked ? onClick : undefined}
       className={cn(
-        'relative flex flex-col items-center p-3 rounded-xl border transition-all duration-300 select-none',
-        'w-36 min-h-[120px] shadow-lg',
+        'relative flex flex-col items-center p-5 rounded-2xl border transition-all duration-300 select-none',
+        'w-48 min-h-[170px] shadow-lg',
         isLocked
           ? 'bg-slate-800/50 border-slate-600/30 opacity-55 cursor-not-allowed'
           : cn(
@@ -82,16 +82,16 @@ export default function TopicNode({ topic, progress, onClick, index = 0 }: Topic
       </div>
 
       {/* Progress ring */}
-      <div className="mb-2">
+      <div className="mb-3">
         {isLocked ? (
-          <div className="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center">
-            <Lock size={18} className="text-slate-500" />
+          <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center">
+            <Lock size={22} className="text-slate-500" />
           </div>
         ) : (
           <CircularProgress
             value={pLPercent}
-            size={48}
-            strokeWidth={4}
+            size={64}
+            strokeWidth={5}
             color={isCompleted ? '#10b981' : styles.progressColor}
             trackColor={isLocked ? '#334155' : '#1e293b'}
             showLabel={true}
@@ -102,19 +102,18 @@ export default function TopicNode({ topic, progress, onClick, index = 0 }: Topic
       {/* Topic name */}
       <p
         className={cn(
-          'text-center font-semibold leading-tight text-xs',
+          'text-center font-semibold leading-snug text-sm px-1',
           isLocked ? 'text-slate-500' : 'text-white'
         )}
-        style={{ fontSize: '0.68rem' }}
       >
         {topic.name}
       </p>
 
       {/* Track badge */}
-      <div className="mt-1.5">
+      <div className="mt-2">
         <span
           className={cn(
-            'text-white/70 px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wide',
+            'text-white/80 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide',
             isLocked ? 'bg-slate-700' : styles.badge
           )}
         >

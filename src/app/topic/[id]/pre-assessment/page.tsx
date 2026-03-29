@@ -95,12 +95,12 @@ export default function PreAssessmentPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-slate-900">
       <Navbar />
-      <main className="pt-20 pb-12">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6">
+      <main className="pt-24 pb-16">
+        <div className="max-w-4xl mx-auto px-8 sm:px-12 lg:px-16">
           {/* Back */}
           <button
             onClick={() => router.push(`/topic/${topicId}`)}
-            className="flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
+            className="flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors text-sm"
           >
             <ArrowLeft size={16} />
             Back to Topic
@@ -173,7 +173,7 @@ export default function PreAssessmentPage({ params }: PageProps) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -30 }}
                   transition={{ duration: 0.3 }}
-                  className="bg-slate-800 rounded-2xl border border-slate-700/50 p-6 shadow-xl"
+                  className="bg-slate-800 rounded-2xl border border-slate-700/50 p-8 shadow-xl"
                 >
                   {/* Subtopic tag */}
                   <div className="flex items-center gap-2 mb-4">
@@ -184,7 +184,7 @@ export default function PreAssessmentPage({ params }: PageProps) {
                   </div>
 
                   {/* Question */}
-                  <h2 className="text-xl font-bold text-white mb-6 leading-snug">
+                  <h2 className="text-2xl font-bold text-white mb-8 leading-snug">
                     {question.text}
                   </h2>
 
@@ -243,12 +243,12 @@ export default function PreAssessmentPage({ params }: PageProps) {
 
               <h2 className="text-2xl font-black text-white mb-3">
                 {phase === 'calculating'
-                  ? 'Analyzing your results...'
-                  : 'Learning path ready!'}
+                  ? 'Analyzing your answers...'
+                  : 'Your learning path is ready!'}
               </h2>
               <p className="text-slate-400 mb-2">
                 {phase === 'calculating'
-                  ? 'Calculating your knowledge level using BKT...'
+                  ? 'Finding the best content for you...'
                   : 'Redirecting to your personalized content...'}
               </p>
 

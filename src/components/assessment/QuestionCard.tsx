@@ -83,7 +83,7 @@ export default function QuestionCard({ question, onAnswer, showResult, isCorrect
     const options = question.type === 'true-false' ? ['True', 'False'] : (question.options || []);
     return (
       <div>
-        <div className="space-y-3 mb-6">
+        <div className="space-y-4 mb-8">
           {options.map((option) => {
             const isSelected = selected === option;
             const isCorrectOption = showResult && option === question.correctAnswer;
@@ -98,7 +98,7 @@ export default function QuestionCard({ question, onAnswer, showResult, isCorrect
                   question.type === 'true-false' ? handleTrueFalse(option) : handleMCQ(option)
                 }
                 className={cn(
-                  'w-full text-left p-4 rounded-xl border-2 transition-all duration-200 text-sm',
+                  'w-full text-left p-5 rounded-xl border-2 transition-all duration-200 text-base leading-snug',
                   !showResult && !isSelected && 'bg-slate-700/50 border-slate-600/50 hover:bg-slate-700 hover:border-slate-500 text-slate-200',
                   !showResult && isSelected && 'bg-indigo-600/30 border-indigo-500 text-white font-medium',
                   isCorrectOption && 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-medium',

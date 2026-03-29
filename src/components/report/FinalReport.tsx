@@ -31,7 +31,7 @@ export default function FinalReport({ state }: FinalReportProps) {
   const radarData = TOPICS.map((topic) => ({
     topic: topic.name.split(' ').slice(0, 2).join(' '),
     fullName: topic.name,
-    knowledge: Math.round((state.topicProgress[topic.id]?.pL || 0.1) * 100),
+    knowledge: Math.round((state.topicProgress[topic.id]?.pL || 0) * 100),
   }));
 
   // Bar chart data by track
@@ -253,7 +253,7 @@ export default function FinalReport({ state }: FinalReportProps) {
           {overallScore < 70 && (
             <li className="flex items-start gap-2 text-sm text-slate-300">
               <span className="text-yellow-400 mt-0.5">→</span>
-              Review the topics where your P(L) is below 60% and retry the assessments.
+              Review the topics where your score is below 60% and try the assessments again.
             </li>
           )}
           {uniqueWeak.length > 0 && (

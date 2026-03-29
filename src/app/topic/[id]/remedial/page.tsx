@@ -60,22 +60,22 @@ export default function RemedialPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-slate-900">
       <Navbar />
-      <main className="pt-20 pb-12">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+      <main className="pt-24 pb-16">
+        <div className="max-w-5xl mx-auto px-8 sm:px-12 lg:px-16">
           {/* Back */}
           <button
             onClick={() => router.push(`/topic/${topicId}`)}
-            className="flex items-center gap-2 text-slate-400 hover:text-white mb-5 transition-colors"
+            className="flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors text-sm"
           >
             <ArrowLeft size={16} />
             Back to Topic
           </button>
 
           {/* Header */}
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-            <h1 className="text-2xl font-black text-white mb-1">Remedial Review</h1>
-            <p className="text-slate-400 text-sm">
-              Let&apos;s strengthen your understanding of the areas that need attention.
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+            <h1 className="text-3xl font-black text-white mb-2">Let&apos;s Review Together!</h1>
+            <p className="text-slate-400 text-base leading-relaxed">
+              We will go through the areas where you need a bit more practice. Take your time!
             </p>
           </motion.div>
 
@@ -121,13 +121,12 @@ export default function RemedialPage({ params }: PageProps) {
               animate={{ opacity: 1, y: 0 }}
               className="mb-6"
             >
-              <div className="bg-slate-800 rounded-2xl border border-slate-700/50 p-6 shadow-xl">
-                <div className="flex items-center gap-2 mb-4">
-                  <BookOpen size={16} className="text-indigo-400" />
-                  <h3 className="font-bold text-white">{activeSubtopic}</h3>
-                  <span className="text-xs text-slate-500">Remedial content</span>
+              <div className="bg-slate-800 rounded-2xl border border-slate-700/50 p-8 shadow-xl">
+                <div className="flex items-center gap-3 mb-5">
+                  <BookOpen size={18} className="text-indigo-400" />
+                  <h3 className="font-bold text-white text-lg">{activeSubtopic}</h3>
                 </div>
-                <div className="text-slate-300 text-sm leading-relaxed bg-slate-700/30 rounded-xl p-4 border border-slate-700/50">
+                <div className="text-slate-300 text-base leading-relaxed bg-slate-700/30 rounded-xl p-6 border border-slate-700/50">
                   {content.remedialContent[activeSubtopic]}
                 </div>
               </div>

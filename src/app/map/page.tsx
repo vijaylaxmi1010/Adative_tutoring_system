@@ -36,16 +36,16 @@ export default function MapPage() {
   const unlockedCount = Object.values(state.topicProgress).filter((p) => p.isUnlocked).length;
 
   return (
-    <div className="h-screen flex flex-col bg-slate-900 overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-slate-900">
       <Navbar />
 
       {/* Full-page content below navbar */}
-      <div className="flex flex-col flex-1 overflow-hidden pt-16">
+      <div className="flex flex-col flex-1 pt-16" style={{ minHeight: 'calc(100vh - 64px)' }}>
         {/* Compact header bar */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between px-6 py-3 bg-slate-800/80 border-b border-slate-700/50 flex-shrink-0"
+          className="flex items-center justify-between px-8 py-4 bg-slate-800/80 border-b border-slate-700/50 flex-shrink-0"
         >
           <div className="flex items-center gap-6">
             <div>
@@ -92,7 +92,7 @@ export default function MapPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.15 }}
-          className="flex-1 overflow-auto"
+          className="flex-1 overflow-y-auto"
         >
           <ConceptMap topicProgress={state.topicProgress} />
         </motion.div>

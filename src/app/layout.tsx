@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'GeoLearn - Adaptive Geometry Tutor',
-  description: 'An adaptive tutoring system for Grade 6 Geometry using Bayesian Knowledge Tracing',
+  description: 'An adaptive tutoring system for Grade 6 Geometry',
 };
 
 export default function RootLayout({

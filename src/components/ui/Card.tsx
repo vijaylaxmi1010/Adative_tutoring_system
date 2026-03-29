@@ -18,7 +18,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'bg-slate-800 rounded-2xl border shadow-xl p-6',
+          'bg-slate-800 rounded-2xl border shadow-xl p-7',
           glowStyles[glow],
           className
         )}

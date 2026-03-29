@@ -14,13 +14,16 @@ interface TimerProps {
 export default function Timer({ avgTimeSeconds, onTimeUpdate, isRunning, className }: TimerProps) {
   const [elapsed, setElapsed] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+  onTimeUpdateRef.current = onTimeUpdate;
 
   useEffect(() => {
     if (isRunning) {
       intervalRef.current = setInterval(() => {
         setElapsed((prev) => {
           const next = prev + 1;
-          onTimeUpdate(next);
+          // Schedule the parent callback after the current render, not during it
+          setTimeout(() => onTimeUpdateRef.current(next), 0);
           return next;
         });
       }, 1000);
@@ -30,7 +33,7 @@ export default function Timer({ avgTimeSeconds, onTimeUpdate, isRunning, classNa
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isRunning, onTimeUpdate]);
+  }, [isRunning]);
 
   // Reset when component remounts (new question)
   useEffect(() => {
