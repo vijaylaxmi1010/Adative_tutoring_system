@@ -9,44 +9,45 @@ interface EmotionDetectorProps {
   onConfusionDetected: () => void;
   isActive: boolean;
   onToggle: () => void;
+  hidden?: boolean;
 }
 
 type Emotion = 'happy' | 'focused' | 'confused' | 'bored';
 
 const MOCK_EMOTIONS: Emotion[] = ['focused', 'happy', 'focused', 'confused', 'focused', 'bored', 'confused'];
 
-export default function EmotionDetector({ onConfusionDetected, isActive, onToggle }: EmotionDetectorProps) {
+export default function EmotionDetector({ onConfusionDetected, isActive, onToggle, hidden }: EmotionDetectorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [hasCamera, setHasCamera] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [currentEmotion, setCurrentEmotion] = useState<Emotion>('focused');
   const [showConfusionAlert, setShowConfusionAlert] = useState(false);
-  const [emotionIndex, setEmotionIndex] = useState(0);
-
   useEffect(() => {
-    if (!isActive) {
-      stopCamera();
+    if (!isActive || hidden) {
+      if (!hidden) stopCamera();
       return;
     }
     startCamera();
     return () => stopCamera();
-  }, [isActive]);
+  }, [isActive, hidden]);
 
   // Mock emotion detection cycle
   useEffect(() => {
     if (!isActive) return;
+    let index = 0;
     const interval = setInterval(() => {
-      setEmotionIndex((prev) => {
-        const next = (prev + 1) % MOCK_EMOTIONS.length;
-        const emotion = MOCK_EMOTIONS[next];
-        setCurrentEmotion(emotion);
-        if (emotion === 'confused') {
+      index = (index + 1) % MOCK_EMOTIONS.length;
+      const emotion = MOCK_EMOTIONS[index];
+      setCurrentEmotion(emotion);
+      if (emotion === 'confused') {
+        if (hidden) {
+          onConfusionDetected();
+        } else {
           setShowConfusionAlert(true);
         }
-        return next;
-      });
-    }, 8000); // Change every 8 seconds
+      }
+    }, 8000);
     return () => clearInterval(interval);
   }, [isActive]);
 
@@ -86,6 +87,8 @@ export default function EmotionDetector({ onConfusionDetected, isActive, onToggl
   };
 
   const config = emotionConfig[currentEmotion];
+
+  if (hidden) return null;
 
   return (
     <div className="w-full">

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Lightbulb, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Lightbulb, CheckCircle, XCircle, X } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import QuestionCard from '@/components/assessment/QuestionCard';
 import HintSystem from '@/components/assessment/HintSystem';
@@ -34,12 +34,14 @@ export default function AssessmentPage({ params }: PageProps) {
   const [showResult, setShowResult] = useState(false);
   const [isHintOpen, setIsHintOpen] = useState(false);
   const [hintsUsedThisQuestion, setHintsUsedThisQuestion] = useState(0);
-  const [timeTaken, setTimeTaken] = useState(0);
   const [timerRunning, setTimerRunning] = useState(true);
   const [bktParams, setBktParams] = useState<BKTParams | null>(null);
   const [phase, setPhase] = useState<AssessmentPhase>('questions');
   const [weakSubtopics, setWeakSubtopics] = useState<string[]>([]);
+  const [showHintNudge, setShowHintNudge] = useState(false);
   const timeRef = useRef(0);
+  const nudgeShownRef = useRef(false);
+  const questionRef = useRef<Question | null>(null);
 
   useEffect(() => {
     const state = getState();
@@ -64,7 +66,13 @@ export default function AssessmentPage({ params }: PageProps) {
 
   const handleTimeUpdate = useCallback((seconds: number) => {
     timeRef.current = seconds;
-    setTimeTaken(seconds);
+    if (!nudgeShownRef.current && questionRef.current) {
+      const threshold = Math.ceil(questionRef.current.avgTimeSeconds * 1.5);
+      if (seconds >= threshold) {
+        nudgeShownRef.current = true;
+        setShowHintNudge(true);
+      }
+    }
   }, []);
 
   const handleAnswer = useCallback((answer: string | string[], isCorrect: boolean) => {
@@ -110,6 +118,8 @@ export default function AssessmentPage({ params }: PageProps) {
       setCurrentResponse(null);
       setIsHintOpen(false);
       setHintsUsedThisQuestion(0);
+      setShowHintNudge(false);
+      nudgeShownRef.current = false;
       timeRef.current = 0;
 
       const newResponses = [...responses, response];
@@ -149,6 +159,7 @@ export default function AssessmentPage({ params }: PageProps) {
   if (!bktParams || questions.length === 0) return null;
 
   const question = questions[currentIndex];
+  questionRef.current = question;
   const pLPercent = Math.round(bktParams.pL * 100);
   const passed = bktParams.pL >= 0.7;
 
@@ -401,6 +412,33 @@ export default function AssessmentPage({ params }: PageProps) {
             onClose={() => setIsHintOpen(false)}
           />
         )}
+
+        {/* Timed hint nudge */}
+        <AnimatePresence>
+          {showHintNudge && !isHintOpen && !showResult && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-slate-800 border border-yellow-500/40 rounded-2xl px-5 py-3.5 shadow-2xl"
+            >
+              <Lightbulb size={16} className="text-yellow-400 flex-shrink-0" />
+              <span className="text-sm text-slate-300">Taking a while? A hint might help!</span>
+              <button
+                onClick={() => { setIsHintOpen(true); setShowHintNudge(false); }}
+                className="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 px-3 py-1.5 rounded-lg transition-colors font-medium whitespace-nowrap"
+              >
+                Show Hint
+              </button>
+              <button
+                onClick={() => setShowHintNudge(false)}
+                className="text-slate-500 hover:text-white transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

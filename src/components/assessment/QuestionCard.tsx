@@ -19,12 +19,21 @@ export default function QuestionCard({ question, onAnswer, showResult, isCorrect
   const [arrangeOrder, setArrangeOrder] = useState<string[]>(question.options || []);
   const [matchState, setMatchState] = useState<Record<string, string>>({});
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+  const [shuffledRights, setShuffledRights] = useState<string[]>(() => {
+    if (question.type === 'match' && question.options) {
+      return [...question.options.map((o) => o.split('|')[1])].sort(() => Math.random() - 0.5);
+    }
+    return [];
+  });
 
   useEffect(() => {
     setSelected(null);
     setArrangeOrder(question.options ? [...question.options].sort(() => Math.random() - 0.5) : []);
     setMatchState({});
     setSelectedLeft(null);
+    if (question.type === 'match' && question.options) {
+      setShuffledRights([...question.options.map((o) => o.split('|')[1])].sort(() => Math.random() - 0.5));
+    }
   }, [question.id]);
 
   const handleMCQ = (option: string) => {
@@ -194,7 +203,6 @@ export default function QuestionCard({ question, onAnswer, showResult, isCorrect
       const [left, right] = opt.split('|');
       return { left, right };
     });
-    const rights = [...pairs.map((p) => p.right)].sort(() => Math.random() - 0.5);
     const correctPairs = Object.fromEntries(pairs.map((p) => [p.left, p.right]));
 
     return (
@@ -230,7 +238,7 @@ export default function QuestionCard({ question, onAnswer, showResult, isCorrect
           </div>
           <div className="space-y-2">
             <p className="text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Match</p>
-            {rights.map((right) => {
+            {shuffledRights.map((right) => {
               const isMatched = Object.values(matchState).includes(right);
               return (
                 <button

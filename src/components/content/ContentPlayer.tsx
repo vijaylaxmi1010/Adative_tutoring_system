@@ -12,6 +12,7 @@ interface ContentPlayerProps {
   isRevision?: boolean;
   onTogglePreference: () => void;
   onContentCompleted?: () => void;
+  pauseVideo?: boolean;
 }
 
 export default function ContentPlayer({
@@ -20,6 +21,7 @@ export default function ContentPlayer({
   isRevision,
   onTogglePreference,
   onContentCompleted,
+  pauseVideo,
 }: ContentPlayerProps) {
   const [section, setSection] = useState(0);
   const visitedRef = useRef<Set<number>>(new Set([0]));
@@ -62,6 +64,13 @@ export default function ContentPlayer({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preference, sections.length]);
+
+  // ── Pause video from outside ────────────────────────────────────────────────
+  useEffect(() => {
+    if (pauseVideo && playerRef.current?.pauseVideo) {
+      playerRef.current.pauseVideo();
+    }
+  }, [pauseVideo]);
 
   // ── Video mode: YouTube IFrame API — fire when video ends ──────────────────
   useEffect(() => {

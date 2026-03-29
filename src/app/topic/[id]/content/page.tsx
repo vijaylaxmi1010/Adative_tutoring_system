@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Camera } from 'lucide-react';
+import { ArrowLeft, ArrowRight, HelpCircle, X } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import ContentPlayer from '@/components/content/ContentPlayer';
 import EmotionDetector from '@/components/content/EmotionDetector';
@@ -24,10 +24,11 @@ export default function ContentPage({ params }: PageProps) {
   const [topic, setTopic] = useState<Topic | null>(null);
   const [progress, setProgress] = useState<TopicProgress | null>(null);
   const [preference, setPreference] = useState<LearningPreference>('video');
-  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [isRevision, setIsRevision] = useState(false);
   const [ready, setReady] = useState(false);
   const [contentFinished, setContentFinished] = useState(false);
+  const [videoPaused, setVideoPaused] = useState(false);
+  const [showConfusionModal, setShowConfusionModal] = useState(false);
 
   useEffect(() => {
     const state = getState();
@@ -58,7 +59,19 @@ export default function ContentPage({ params }: PageProps) {
   };
 
   const handleConfusion = () => {
-    handleTogglePreference();
+    setVideoPaused(true);
+    setShowConfusionModal(true);
+  };
+
+  const handleConfusionYes = () => {
+    setShowConfusionModal(false);
+    setVideoPaused(false);
+    if (preference === 'video') handleTogglePreference();
+  };
+
+  const handleConfusionNo = () => {
+    setShowConfusionModal(false);
+    setVideoPaused(false);
   };
 
   const content = TOPIC_CONTENT.find((c) => c.topicId === topicId);
@@ -118,14 +131,43 @@ export default function ContentPage({ params }: PageProps) {
               transition={{ delay: 0.1 }}
               className="xl:col-span-4"
             >
-              <div className="bg-slate-800 rounded-2xl border border-slate-700/50 p-8 shadow-xl">
+              <div className="relative bg-slate-800 rounded-2xl border border-slate-700/50 p-8 shadow-xl">
                 <ContentPlayer
                   content={content}
                   preference={preference}
                   isRevision={isRevision}
                   onTogglePreference={handleTogglePreference}
                   onContentCompleted={() => setContentFinished(true)}
+                  pauseVideo={videoPaused}
                 />
+
+                {/* Confusion modal — overlays the content when triggered */}
+                {showConfusionModal && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-900/80 backdrop-blur-sm z-20">
+                    <div className="bg-slate-800 border border-yellow-500/40 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <HelpCircle size={20} className="text-yellow-400 flex-shrink-0" />
+                          <h3 className="text-white font-bold text-lg">Feeling confused?</h3>
+                        </div>
+                        <button onClick={handleConfusionNo} className="text-slate-500 hover:text-white transition-colors">
+                          <X size={18} />
+                        </button>
+                      </div>
+                      <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                        We noticed you might be struggling. Would you like a detailed text explanation instead?
+                      </p>
+                      <div className="flex flex-col gap-3">
+                        <Button variant="primary" size="md" className="w-full" onClick={handleConfusionYes}>
+                          Yes, show me a detailed explanation
+                        </Button>
+                        <Button variant="secondary" size="md" className="w-full" onClick={handleConfusionNo}>
+                          No, I&apos;m fine — continue
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Ready button — locked until content is finished */}
@@ -162,18 +204,13 @@ export default function ContentPage({ params }: PageProps) {
               transition={{ delay: 0.2 }}
               className="space-y-5"
             >
-              {/* Emotion detector */}
-              <div className="bg-slate-800 rounded-2xl border border-slate-700/50 p-5 shadow-xl">
-                <div className="flex items-center gap-2 mb-4">
-                  <Camera size={15} className="text-slate-400" />
-                  <h3 className="text-sm font-bold text-white">Emotion Tracker</h3>
-                </div>
-                <EmotionDetector
-                  isActive={cameraEnabled}
-                  onToggle={() => setCameraEnabled(!cameraEnabled)}
-                  onConfusionDetected={handleConfusion}
-                />
-              </div>
+              {/* Hidden background emotion detector */}
+              <EmotionDetector
+                isActive
+                hidden
+                onToggle={() => {}}
+                onConfusionDetected={handleConfusion}
+              />
 
               {/* Subtopics sidebar */}
               <div className="bg-slate-800 rounded-2xl border border-slate-700/50 p-5 shadow-xl">

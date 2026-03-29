@@ -37,6 +37,7 @@ export default function LandingPage() {
   const [form, setForm] = useState({ name: '', age: '11', grade: '6' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
     const state = getState();
@@ -52,7 +53,13 @@ export default function LandingPage() {
       return;
     }
     setLoading(true);
-    clearState(); // wipe all previous student data before creating a new session
+    // Same person returning — restore their progress
+    const existing = getState();
+    if (existing.student?.name.toLowerCase() === form.name.trim().toLowerCase()) {
+      setTimeout(() => router.push('/map'), 300);
+      return;
+    }
+    clearState();
     const student: StudentProfile = {
       id: generateId(),
       name: form.name.trim(),
@@ -69,6 +76,12 @@ export default function LandingPage() {
 
   const handleContinue = () => {
     router.push('/map');
+  };
+
+  const handleReset = () => {
+    clearState();
+    setReturningStudent(null);
+    setShowResetConfirm(false);
   };
 
   const features = [
@@ -198,6 +211,21 @@ export default function LandingPage() {
                 <Button variant="secondary" size="lg" onClick={() => setIsLoginOpen(true)}>
                   Start Fresh
                 </Button>
+                {!showResetConfirm ? (
+                  <Button variant="danger" size="lg" onClick={() => setShowResetConfirm(true)}>
+                    Reset Progress
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-2">
+                    <span className="text-sm text-red-300">Are you sure?</span>
+                    <button onClick={handleReset} className="text-xs bg-red-500 hover:bg-red-400 text-white px-3 py-1.5 rounded-lg font-medium transition-colors">
+                      Yes, reset
+                    </button>
+                    <button onClick={() => setShowResetConfirm(false)} className="text-xs text-slate-400 hover:text-white transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <Button variant="primary" size="lg" onClick={() => setIsLoginOpen(true)}>
