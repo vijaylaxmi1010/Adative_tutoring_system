@@ -134,6 +134,16 @@ export default function AssessmentPage({ params }: PageProps) {
       const newResponses = [...responses, response];
       setResponses(newResponses);
 
+      const canFinishEarly =
+        newResponses.length >= progressionConfig.minQuestionsBeforeMasteryCheck &&
+        updatedParams.pL >= progressionConfig.unlockThresholdPL;
+
+      if (canFinishEarly) {
+        setPhase('complete');
+        finalizeAssessment(updatedParams, newResponses);
+        return;
+      }
+
       if (currentIndex < questions.length - 1) {
         setCurrentIndex(currentIndex + 1);
         setTimerRunning(true);
@@ -143,7 +153,16 @@ export default function AssessmentPage({ params }: PageProps) {
         finalizeAssessment(updatedParams, newResponses);
       }
     }, 2000);
-  }, [bktParams, questions, currentIndex, hintsUsedThisQuestion, responses, topicId]);
+  }, [
+    bktParams,
+    currentIndex,
+    hintsUsedThisQuestion,
+    progressionConfig.minQuestionsBeforeMasteryCheck,
+    progressionConfig.unlockThresholdPL,
+    questions,
+    responses,
+    topicId,
+  ]);
 
   const finalizeAssessment = useCallback((finalParams: BKTParams, allResponses: QuestionResponse[]) => {
     const correct = allResponses.filter((r) => r.isCorrect).length;
@@ -200,7 +219,7 @@ export default function AssessmentPage({ params }: PageProps) {
   const question = questions[currentIndex];
   questionRef.current = question;
   const pLPercent = Math.round(bktParams.pL * 100);
-  const attemptedCount = phase === 'complete' ? questions.length : responses.length;
+  const attemptedCount = responses.length;
   const assessmentAttemptCount = assessmentAttemptsRef.current + (phase === 'complete' ? 1 : 0);
   const forceAdvance = assessmentAttemptCount >= progressionConfig.maxAttemptsBeforeForceAdvance;
   const passed =
