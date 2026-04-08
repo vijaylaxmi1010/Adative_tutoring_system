@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import { getState, setStudent, clearState } from '@/lib/store';
 import { generateId } from '@/lib/utils';
 import { StudentProfile } from '@/types';
+import { extractSessionParams } from '@/lib/mergeApi';
 
 // Animated geometric shapes
 function FloatingShape({ className, delay = 0, style }: { className: string; delay?: number; style?: React.CSSProperties }) {
@@ -40,6 +41,7 @@ export default function LandingPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
+    extractSessionParams(); // capture token/student_id/session_id from Merge redirect URL
     const state = getState();
     if (state.student) {
       setReturningStudent(state.student);

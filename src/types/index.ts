@@ -77,6 +77,7 @@ export interface QuestionResponse {
   hintsUsed: number;
   timeTakenSeconds: number;
   selectedAnswer: string | string[];
+  excluded?: boolean; // true when L4 hint (solution) was shown — not counted toward mastery
 }
 
 export interface AppState {

@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       success: true,
       params: updatedParams,
       delta: updatedParams.pL - body.params.pL,
+      excluded: updatedParams.excluded,
     });
   } catch (error) {
     console.error('BKT API error:', error);

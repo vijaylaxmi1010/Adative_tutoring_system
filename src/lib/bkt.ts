@@ -140,41 +140,104 @@ export function getTopicProgressionConfig(topicId: string): ProgressionConfig {
   };
 }
 
+// ── Per-topic hint update deltas ─────────────────────────────────────────────
+// P(G) deltas when answer is CORRECT after hint (bkt_parameters_1 pages 3-4)
+// P(S) deltas when answer is WRONG after hint  (bkt_parameters_1 pages 5-6)
+type HintDeltas = { l1: number; l2: number; l3: number };
+
+const TOPIC_HINT_PG_CORRECT: Record<string, HintDeltas> = {
+  'LA-01': { l1: 0.03, l2: 0.05, l3: 0.07 },
+  'LA-02': { l1: 0.03, l2: 0.05, l3: 0.07 },
+  'LA-03': { l1: 0.03, l2: 0.06, l3: 0.08 },
+  'LA-04': { l1: 0.03, l2: 0.06, l3: 0.08 },
+  'LA-05': { l1: 0.03, l2: 0.05, l3: 0.07 },
+  'PC-01': { l1: 0.03, l2: 0.05, l3: 0.08 },
+  'PC-02': { l1: 0.03, l2: 0.06, l3: 0.08 },
+  'PC-03': { l1: 0.04, l2: 0.06, l3: 0.09 },
+  'PC-04': { l1: 0.04, l2: 0.07, l3: 0.09 },
+  'PC-05': { l1: 0.04, l2: 0.07, l3: 0.10 },
+};
+
+const TOPIC_HINT_PS_WRONG: Record<string, HintDeltas> = {
+  'LA-01': { l1: 0.02, l2: 0.04, l3: 0.06 },
+  'LA-02': { l1: 0.02, l2: 0.04, l3: 0.06 },
+  'LA-03': { l1: 0.02, l2: 0.04, l3: 0.07 },
+  'LA-04': { l1: 0.02, l2: 0.05, l3: 0.07 },
+  'LA-05': { l1: 0.02, l2: 0.04, l3: 0.06 },
+  'PC-01': { l1: 0.02, l2: 0.04, l3: 0.07 },
+  'PC-02': { l1: 0.02, l2: 0.05, l3: 0.07 },
+  'PC-03': { l1: 0.02, l2: 0.05, l3: 0.08 },
+  'PC-04': { l1: 0.02, l2: 0.05, l3: 0.08 },
+  'PC-05': { l1: 0.03, l2: 0.06, l3: 0.09 },
+};
+
 export interface BKTUpdateInput {
   params: BKTParams;
   isCorrect: boolean;
   difficultyScore: number;
   avgTimeSeconds: number;
   timeTakenSeconds: number;
-  hintsUsed: number;
+  hintsUsed: number; // 0 = no hints, 1 = L1 used, 2 = L2 used, 3 = L3 used, 4 = L4 (solution shown)
 }
 
-export function updateBKT(input: BKTUpdateInput): BKTParams {
+export interface BKTUpdateResult extends BKTParams {
+  excluded: boolean; // true when L4 hint shown — question NOT counted toward mastery
+}
+
+export function updateBKT(input: BKTUpdateInput): BKTUpdateResult {
   const { params, isCorrect, difficultyScore, avgTimeSeconds, timeTakenSeconds, hintsUsed } = input;
   let { pL, pT, pG, pS } = params;
 
-  // Adjust pG and pS based on time taken
+  // ── L4 (solution shown): flag Excluded, do NOT update P(L), only bump P(G) ─
+  if (hintsUsed >= 4) {
+    return {
+      ...params,
+      pG: Math.min(0.99, pG + 0.1),
+      excluded: true,
+    };
+  }
+
   let adjustedPG = pG;
   let adjustedPS = pS;
 
+  // ── Time-based P(G) update for CORRECT answers ────────────────────────────
+  // < 0.2×avg → likely guess → P(G) +0.08
+  // 0.2–0.5×avg → possible guess → P(G) +0.04
+  // 0.8–1.2×avg → normal → no change
   if (isCorrect) {
-    // Very fast correct answer may indicate guessing
-    if (timeTakenSeconds < 0.5 * avgTimeSeconds) {
-      adjustedPG = Math.min(0.5, pG * 1.2);
-    }
-    // Slow but correct indicates careful thinking (reduce slip)
-    if (timeTakenSeconds > 2 * avgTimeSeconds) {
-      adjustedPS = Math.max(0.05, pS * 0.9);
+    if (timeTakenSeconds < 0.2 * avgTimeSeconds) {
+      adjustedPG = Math.min(0.99, pG + 0.08);
+    } else if (timeTakenSeconds < 0.5 * avgTimeSeconds) {
+      adjustedPG = Math.min(0.99, pG + 0.04);
     }
   }
 
-  // Hints used reduce confidence in knowledge assessment
-  const hintPenalty = hintsUsed * 0.05;
-  adjustedPS = Math.min(0.4, adjustedPS + hintPenalty);
+  // ── Time-based P(S) update for WRONG answers ─────────────────────────────
+  // > 2.0×avg → struggled but knew → P(S) +0.06
+  if (!isCorrect && timeTakenSeconds > 2.0 * avgTimeSeconds) {
+    adjustedPS = Math.min(0.99, pS + 0.06);
+  }
 
-  // Standard BKT update
+  // ── Hint-based P(G) update for CORRECT answers ───────────────────────────
+  if (isCorrect && hintsUsed > 0) {
+    const d = TOPIC_HINT_PG_CORRECT[params.topicId] ?? { l1: 0.03, l2: 0.05, l3: 0.07 };
+    if (hintsUsed === 1) adjustedPG = Math.min(0.99, adjustedPG + d.l1);
+    else if (hintsUsed === 2) adjustedPG = Math.min(0.99, adjustedPG + d.l2);
+    else if (hintsUsed === 3) adjustedPG = Math.min(0.99, adjustedPG + d.l3);
+  }
+
+  // ── Hint-based P(S) update for WRONG answers ─────────────────────────────
+  if (!isCorrect && hintsUsed > 0) {
+    const d = TOPIC_HINT_PS_WRONG[params.topicId] ?? { l1: 0.02, l2: 0.04, l3: 0.06 };
+    if (hintsUsed === 1) adjustedPS = Math.min(0.99, adjustedPS + d.l1);
+    else if (hintsUsed === 2) adjustedPS = Math.min(0.99, adjustedPS + d.l2);
+    else if (hintsUsed === 3) adjustedPS = Math.min(0.99, adjustedPS + d.l3);
+    // L4 already handled above (excluded path)
+  }
+
+  // ── Standard BKT posterior update ────────────────────────────────────────
   const pCorrect = pL * (1 - adjustedPS) + (1 - pL) * adjustedPG;
-  const pWrong = pL * adjustedPS + (1 - pL) * (1 - adjustedPG);
+  const pWrong   = pL * adjustedPS       + (1 - pL) * (1 - adjustedPG);
 
   let pLGivenEvidence: number;
   if (isCorrect) {
@@ -183,37 +246,30 @@ export function updateBKT(input: BKTUpdateInput): BKTParams {
     pLGivenEvidence = (pL * adjustedPS) / Math.max(pWrong, 0.001);
   }
 
-  // Transit: P(L_{n+1}) = P(L_n | evidence) + (1 - P(L_n | evidence)) * P(T)
+  // ── Transit with difficulty weighting ────────────────────────────────────
+  const assessmentConfig = getTopicAssessmentConfig(params.topicId);
   let transitMultiplier = 1.0;
 
-  const assessmentConfig = getTopicAssessmentConfig(params.topicId);
-
-  // Difficulty weighting
   if (isCorrect) {
-    if (difficultyScore < 0.34) {
-      transitMultiplier = assessmentConfig.correctWeight.easy;
-    } else if (difficultyScore < 0.67) {
-      transitMultiplier = assessmentConfig.correctWeight.medium;
-    } else {
-      transitMultiplier = assessmentConfig.correctWeight.hard;
-    }
+    if (difficultyScore < 0.34)      transitMultiplier = assessmentConfig.correctWeight.easy;
+    else if (difficultyScore < 0.67) transitMultiplier = assessmentConfig.correctWeight.medium;
+    else                             transitMultiplier = assessmentConfig.correctWeight.hard;
   } else {
-    if (difficultyScore < 0.3) {
-      transitMultiplier = 0.7; // Easy question wrong: bigger penalty
-    }
+    if (difficultyScore < 0.3) transitMultiplier = 0.7; // easy wrong → bigger penalty
   }
 
   const effectivePT = Math.min(pT * transitMultiplier, 0.5);
-  let newPL = pLGivenEvidence + (1 - pLGivenEvidence) * effectivePT;
-
-  // Clamp
-  newPL = Math.min(Math.max(newPL, 0.01), 0.99);
+  const newPL = Math.min(Math.max(
+    pLGivenEvidence + (1 - pLGivenEvidence) * effectivePT,
+    0.01
+  ), 0.99);
 
   return {
     ...params,
     pL: newPL,
     pG: adjustedPG,
     pS: adjustedPS,
+    excluded: false,
   };
 }
 

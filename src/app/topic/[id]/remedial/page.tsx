@@ -8,9 +8,10 @@ import Navbar from '@/components/layout/Navbar';
 import Button from '@/components/ui/Button';
 import { getState } from '@/lib/store';
 import { TOPICS, TOPIC_CONTENT } from '@/lib/mock-data';
-import { getTopicProgressionConfig } from '@/lib/bkt';
+import { getTopicProgressionConfig, getTopicAssessmentConfig } from '@/lib/bkt';
 import { use } from 'react';
 import { Topic, TopicProgress } from '@/types';
+import ReactMarkdown from 'react-markdown';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -25,6 +26,7 @@ export default function RemedialPage({ params }: PageProps) {
   const [activeSubtopic, setActiveSubtopic] = useState<string | null>(null);
   const [allViewed, setAllViewed] = useState(false);
   const [remedialLimitReached, setRemedialLimitReached] = useState(false);
+  const [remedialThreshold, setRemedialThreshold] = useState(0.6);
 
   useEffect(() => {
     const state = getState();
@@ -33,9 +35,12 @@ export default function RemedialPage({ params }: PageProps) {
     const p = state.topicProgress[topicId];
     if (!t || !p) { router.push('/map'); return; }
     const progressionConfig = getTopicProgressionConfig(topicId);
+    const assessmentConfig = getTopicAssessmentConfig(topicId);
     setTopic(t);
     setProgress(p);
-    setRemedialLimitReached((p.remedialAttempts ?? 0) > progressionConfig.maxRemedialAttempts);
+    setRemedialThreshold(assessmentConfig.remedialThreshold);
+    // >= because maxRemedialAttempts is the limit — reaching it means no more rounds
+    setRemedialLimitReached((p.remedialAttempts ?? 0) >= progressionConfig.maxRemedialAttempts);
     // Auto-select first weak subtopic
     if (p.weakSubtopics.length > 0) {
       setActiveSubtopic(p.weakSubtopics[0]);
@@ -79,12 +84,14 @@ export default function RemedialPage({ params }: PageProps) {
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
             <h1 className="text-3xl font-black text-white mb-2">Let&apos;s Review Together!</h1>
             <p className="text-slate-400 text-base leading-relaxed">
-              We will go through the areas where you need a bit more practice. Take your time!
+              Your score on some subtopics was below the required threshold. Read through each section carefully before trying the assessment again.
             </p>
             {remedialLimitReached && (
-              <p className="text-yellow-400 text-sm mt-2">
-                Maximum remedial rounds reached for this topic. Try assessment again to continue.
-              </p>
+              <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                <p className="text-yellow-400 text-sm font-medium">
+                  Maximum remedial rounds reached. Try the assessment again to continue to the next topic.
+                </p>
+              </div>
             )}
           </motion.div>
 
@@ -125,7 +132,7 @@ export default function RemedialPage({ params }: PageProps) {
           )}
 
           {/* Active content */}
-          {!remedialLimitReached && activeSubtopic && content.remedialContent[activeSubtopic] && (
+          {!remedialLimitReached && activeSubtopic && (
             <motion.div
               key={activeSubtopic}
               initial={{ opacity: 0, y: 10 }}
@@ -133,30 +140,42 @@ export default function RemedialPage({ params }: PageProps) {
               className="mb-6"
             >
               <div className="bg-slate-800 rounded-2xl border border-slate-700/50 p-8 shadow-xl">
-                <div className="flex items-center gap-3 mb-5">
-                  <BookOpen size={18} className="text-indigo-400" />
-                  <h3 className="font-bold text-white text-lg">{activeSubtopic}</h3>
+                <div className="flex items-center justify-between gap-3 mb-5">
+                  <div className="flex items-center gap-3">
+                    <BookOpen size={18} className="text-indigo-400" />
+                    <h3 className="font-bold text-white text-lg">{activeSubtopic}</h3>
+                  </div>
+                  <span className="text-xs text-slate-500 bg-slate-700/60 px-2 py-1 rounded-lg">
+                    Needs &gt; {Math.round(remedialThreshold * 100)}% correct to pass
+                  </span>
                 </div>
-                <div className="text-slate-300 text-base leading-relaxed bg-slate-700/30 rounded-xl p-6 border border-slate-700/50">
-                  {content.remedialContent[activeSubtopic]}
-                </div>
-              </div>
-            </motion.div>
-          )}
 
-          {!remedialLimitReached && activeSubtopic && !content.remedialContent[activeSubtopic] && (
-            <motion.div
-              key={activeSubtopic}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mb-6"
-            >
-              <div className="bg-slate-800 rounded-2xl border border-slate-700/50 p-6">
-                <h3 className="font-bold text-white mb-3">{activeSubtopic}</h3>
-                <p className="text-slate-400 text-sm">
-                  Review the main content for this subtopic by going back to the content page.
-                  Focus on understanding the definition and examples of {activeSubtopic}.
-                </p>
+                {content.remedialContent[activeSubtopic] ? (
+                  <div className="bg-slate-700/30 rounded-xl p-6 border border-slate-700/50 prose prose-invert prose-sm max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({ children }) => <h1 className="text-xl font-bold text-white mb-3">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-lg font-semibold text-white mb-2">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-base font-semibold text-white mb-2">{children}</h3>,
+                        p: ({ children }) => <p className="text-slate-300 text-sm leading-relaxed mb-2">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc list-inside space-y-1 text-slate-300 text-sm mb-2">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 text-slate-300 text-sm mb-2">{children}</ol>,
+                        li: ({ children }) => <li className="text-slate-300">{children}</li>,
+                        strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+                        hr: () => <hr className="border-slate-600 my-3" />,
+                      }}
+                    >
+                      {content.remedialContent[activeSubtopic]}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="bg-slate-700/30 rounded-xl p-6 border border-slate-700/50">
+                    <p className="text-slate-400 text-sm">
+                      Review the main content for this subtopic by going back to the content page.
+                      Focus on understanding the definition and examples of <strong className="text-white">{activeSubtopic}</strong>.
+                    </p>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

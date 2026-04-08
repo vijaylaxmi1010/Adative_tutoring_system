@@ -16,6 +16,7 @@ import { updateBKT, getTopicEngagementConfig, getTopicProgressionConfig, getTopi
 import { use } from 'react';
 import { Question, QuestionResponse, BKTParams } from '@/types';
 import { cn } from '@/lib/utils';
+import { getSessionParams, sendRecommendation, RecommendPayload, RecommendResponse } from '@/lib/mergeApi';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -39,11 +40,15 @@ export default function AssessmentPage({ params }: PageProps) {
   const [phase, setPhase] = useState<AssessmentPhase>('questions');
   const [weakSubtopics, setWeakSubtopics] = useState<string[]>([]);
   const [showHintNudge, setShowHintNudge] = useState(false);
+  const [recommendation, setRecommendation] = useState<RecommendResponse | null>(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
   const timeRef = useRef(0);
   const nudgeShownRef = useRef(false);
   const lastHintNudgeMsRef = useRef(0);
   const assessmentAttemptsRef = useRef(0);
   const questionRef = useRef<Question | null>(null);
+  const startTimeRef = useRef(Date.now());
+  const responsesRef = useRef<QuestionResponse[]>([]);
   const engagementConfig = getTopicEngagementConfig(topicId);
   const progressionConfig = getTopicProgressionConfig(topicId);
   const assessmentConfig = getTopicAssessmentConfig(topicId);
@@ -68,7 +73,48 @@ export default function AssessmentPage({ params }: PageProps) {
     // Shuffle for variety
     const shuffled = [...qs].sort(() => Math.random() - 0.5);
     setQuestions(shuffled);
+    startTimeRef.current = Date.now();
   }, [topicId, router]);
+
+  // Keep responsesRef in sync so the beforeunload handler reads current data
+  useEffect(() => { responsesRef.current = responses; }, [responses]);
+
+  // Send "exited_midway" if the student leaves mid-assessment
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (phase === 'complete') return; // already finalized
+      const { student_id, session_id } = getSessionParams();
+      if (!student_id || !session_id) return;
+      const rs = responsesRef.current;
+      const countable = rs.filter((r) => !r.excluded);
+      const correct = countable.filter((r) => r.isCorrect).length;
+      const state = getState();
+      const progressValues = Object.values(state.topicProgress);
+      const completedCount = progressValues.filter((p) => p.isCompleted).length;
+      const payload: RecommendPayload = {
+        student_id,
+        session_id,
+        chapter_id: topicId,
+        timestamp: new Date().toISOString(),
+        session_status: 'exited_midway',
+        correct_answers: correct,
+        wrong_answers: countable.length - correct,
+        questions_attempted: countable.length,
+        total_questions: questions.length,
+        retry_count: assessmentAttemptsRef.current,
+        hints_used: rs.reduce((s, r) => s + r.hintsUsed, 0),
+        total_hints_embedded: questions.length * 4,
+        time_spent_seconds: Math.round((Date.now() - startTimeRef.current) / 1000),
+        topic_completion_ratio: progressValues.length > 0 ? completedCount / progressValues.length : 0,
+      };
+      navigator.sendBeacon(
+        'https://kaushik-dev.online/api/recommend/',
+        new Blob([JSON.stringify(payload)], { type: 'application/json' })
+      );
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [topicId, questions.length, phase]);
 
   const handleTimeUpdate = useCallback((seconds: number) => {
     timeRef.current = seconds;
@@ -107,6 +153,7 @@ export default function AssessmentPage({ params }: PageProps) {
       hintsUsed: hintsUsedThisQuestion,
       timeTakenSeconds: timeRef.current,
       selectedAnswer: answer,
+      excluded: updatedParams.excluded, // L4 hint shown — not counted toward mastery
     };
     setCurrentResponse(response);
     setShowResult(true);
@@ -165,22 +212,23 @@ export default function AssessmentPage({ params }: PageProps) {
   ]);
 
   const finalizeAssessment = useCallback((finalParams: BKTParams, allResponses: QuestionResponse[]) => {
-    const correct = allResponses.filter((r) => r.isCorrect).length;
+    // Excluded responses (L4 hint shown) are NOT counted toward mastery or subtopic scoring
+    const countableResponses = allResponses.filter((r) => !r.excluded);
+    const correct = countableResponses.filter((r) => r.isCorrect).length;
     const totalHints = allResponses.reduce((sum, r) => sum + r.hintsUsed, 0);
     const nextAssessmentAttempts = assessmentAttemptsRef.current + 1;
     const passedByKnowledge =
       finalParams.pL >= progressionConfig.unlockThresholdPL &&
-      allResponses.length >= progressionConfig.minQuestionsBeforeMasteryCheck;
+      countableResponses.length >= progressionConfig.minQuestionsBeforeMasteryCheck;
     const forceAdvance = nextAssessmentAttempts >= progressionConfig.maxAttemptsBeforeForceAdvance;
-    const passed =
-      passedByKnowledge || forceAdvance;
+    const passed = passedByKnowledge || forceAdvance;
 
     const responseByQuestionId = new Map(allResponses.map((response) => [response.questionId, response]));
     const bySubtopic: Record<string, { total: number; correct: number }> = {};
 
     questions.forEach((question) => {
       const response = responseByQuestionId.get(question.id);
-      if (!response) return;
+      if (!response || response.excluded) return; // skip L4-excluded questions
 
       if (!bySubtopic[question.subtopic]) {
         bySubtopic[question.subtopic] = { total: 0, correct: 0 };
@@ -200,7 +248,7 @@ export default function AssessmentPage({ params }: PageProps) {
 
     updateTopicProgress(topicId, {
       ...finalParams,
-      assessmentScore: correct / allResponses.length,
+      assessmentScore: countableResponses.length > 0 ? correct / countableResponses.length : 0,
       isCompleted: passed,
       hintsUsed: totalHints,
       totalQuestions: allResponses.length,
@@ -211,6 +259,35 @@ export default function AssessmentPage({ params }: PageProps) {
 
     if (passed) {
       unlockNextTopics(topicId);
+    }
+
+    // Send session data to Recommendation API
+    const { student_id, session_id } = getSessionParams();
+    if (student_id && session_id) {
+      const state = getState();
+      const progressValues = Object.values(state.topicProgress);
+      const completedCount = progressValues.filter((p) => p.isCompleted).length;
+      const payload: RecommendPayload = {
+        student_id,
+        session_id,
+        chapter_id: topicId,
+        timestamp: new Date().toISOString(),
+        session_status: 'completed',
+        correct_answers: correct,
+        wrong_answers: countableResponses.length - correct,
+        questions_attempted: countableResponses.length,
+        total_questions: allResponses.length,
+        retry_count: assessmentAttemptsRef.current,
+        hints_used: totalHints,
+        total_hints_embedded: questions.length * 4,
+        time_spent_seconds: Math.round((Date.now() - startTimeRef.current) / 1000),
+        topic_completion_ratio: progressValues.length > 0 ? completedCount / progressValues.length : 0,
+      };
+      setRecommendationLoading(true);
+      sendRecommendation(payload).then((result) => {
+        setRecommendation(result);
+        setRecommendationLoading(false);
+      });
     }
   }, [assessmentConfig.remedialThreshold, progressionConfig.maxAttemptsBeforeForceAdvance, progressionConfig.minQuestionsBeforeMasteryCheck, progressionConfig.unlockThresholdPL, questions, topicId]);
 
@@ -412,6 +489,44 @@ export default function AssessmentPage({ params }: PageProps) {
                   </div>
                 ))}
               </div>
+
+              {/* Recommendation card */}
+              {recommendationLoading && (
+                <div className="mb-6 p-4 bg-slate-800 border border-slate-700/50 rounded-xl text-center">
+                  <p className="text-slate-400 text-sm">Fetching your personalised recommendation…</p>
+                </div>
+              )}
+              {recommendation && !recommendationLoading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-5 bg-indigo-500/10 border border-indigo-500/30 rounded-xl text-left"
+                >
+                  <p className="text-xs text-indigo-400 font-semibold uppercase tracking-wide mb-2">AI Recommendation</p>
+                  <p className="text-white font-semibold text-sm mb-1 capitalize">{recommendation.learning_state.replace(/_/g, ' ')}</p>
+                  <p className="text-slate-300 text-sm mb-3">{recommendation.recommendation.reason}</p>
+                  {recommendation.recommendation.next_steps.length > 0 && (
+                    <ul className="space-y-1 mb-3">
+                      {recommendation.recommendation.next_steps.map((step, i) => (
+                        <li key={i} className="flex items-start gap-2 text-slate-300 text-xs">
+                          <span className="text-indigo-400 mt-0.5">›</span>
+                          {step}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {recommendation.recommendation.prerequisite_url && (
+                    <a
+                      href={recommendation.recommendation.prerequisite_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block mt-1 text-xs text-indigo-400 underline hover:text-indigo-300"
+                    >
+                      Prerequisite resource →
+                    </a>
+                  )}
+                </motion.div>
+              )}
 
               {passed ? (
                 <div className="space-y-3">

@@ -1,110 +1,186 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, CameraOff, HelpCircle, X, Smile } from 'lucide-react';
-import Button from '@/components/ui/Button';
+import { Camera, CameraOff, Smile } from 'lucide-react';
+
+const MODEL_URL = '/models';
+const DETECTION_INTERVAL_MS = 3000;
+const CONSECUTIVE_THRESHOLD = 2;
 
 interface EmotionDetectorProps {
   onConfusionDetected: () => void;
   isActive: boolean;
   onToggle: () => void;
   hidden?: boolean;
-  alertThresholdFrames?: number;
+  alertThresholdFrames?: number; // kept for API compatibility
+  onCameraError?: () => void;
 }
 
-type Emotion = 'happy' | 'focused' | 'confused' | 'bored';
-
-const MOCK_EMOTIONS: Emotion[] = ['focused', 'happy', 'focused', 'confused', 'focused', 'bored', 'confused'];
-
-export default function EmotionDetector({ onConfusionDetected, isActive, onToggle, hidden, alertThresholdFrames = 20 }: EmotionDetectorProps) {
+export default function EmotionDetector({
+  onConfusionDetected,
+  isActive,
+  onToggle,
+  hidden,
+  onCameraError,
+}: EmotionDetectorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const confusionFramesRef = useRef(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const consecutiveRef = useRef({ confused: 0, frustrated: 0 });
+  const faceapiRef = useRef<any>(null);
+  const modelsLoadedRef = useRef(false);
+  const onConfusionDetectedRef = useRef(onConfusionDetected);
+  onConfusionDetectedRef.current = onConfusionDetected;
+  const onCameraErrorRef = useRef(onCameraError);
+  onCameraErrorRef.current = onCameraError;
+
   const [hasCamera, setHasCamera] = useState(false);
   const [cameraError, setCameraError] = useState(false);
-  const [currentEmotion, setCurrentEmotion] = useState<Emotion>('focused');
-  const [showConfusionAlert, setShowConfusionAlert] = useState(false);
+  const [currentEmotion, setCurrentEmotion] = useState('neutral');
+  const [modelsReady, setModelsReady] = useState(false);
+
   useEffect(() => {
-    if (!isActive || hidden) {
-      if (!hidden) stopCamera();
+    if (!isActive) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      setHasCamera(false);
       return;
     }
-    startCamera();
-    return () => stopCamera();
-  }, [isActive, hidden]);
 
-  // Mock emotion detection cycle
-  useEffect(() => {
-    if (!isActive) return;
-    let index = 0;
-    const interval = setInterval(() => {
-      index = (index + 1) % MOCK_EMOTIONS.length;
-      const emotion = MOCK_EMOTIONS[index];
-      setCurrentEmotion(emotion);
+    let mounted = true;
 
-      if (emotion === 'confused') {
-        confusionFramesRef.current += 5;
-      } else {
-        confusionFramesRef.current = Math.max(0, confusionFramesRef.current - 2);
-      }
-
-      if (confusionFramesRef.current < alertThresholdFrames) return;
-
-      confusionFramesRef.current = 0;
-      if (emotion === 'confused') {
-        if (hidden) {
-          onConfusionDetected();
-        } else {
-          setShowConfusionAlert(true);
+    const setup = async () => {
+      // ── 1. Start camera first — don't wait for models ──────────────────────
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 160, height: 120 },
+          audio: false,
+        });
+        if (!mounted) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
         }
+        if (mounted) setHasCamera(true);
+      } catch (err) {
+        console.warn('[EmotionDetector] Camera access denied:', err);
+        if (mounted) {
+          setCameraError(true);
+          onCameraErrorRef.current?.();
+        }
+        return; // can't detect without camera
       }
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [alertThresholdFrames, hidden, isActive, onConfusionDetected]);
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 160, height: 120 } });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      // ── 2. Load face-api.js models in parallel ─────────────────────────────
+      if (!modelsLoadedRef.current) {
+        try {
+          const faceapi = await import('face-api.js');
+          faceapiRef.current = faceapi;
+          await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+            faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+          ]);
+          modelsLoadedRef.current = true;
+          if (mounted) setModelsReady(true);
+        } catch (err) {
+          console.warn('[EmotionDetector] Failed to load models:', err);
+          return;
+        }
+      } else {
+        if (mounted) setModelsReady(true);
       }
-      setHasCamera(true);
-      setCameraError(false);
-    } catch {
-      setCameraError(true);
-      setHasCamera(false);
-    }
-  };
 
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
+      if (!mounted) return;
+
+      // ── 3. Run emotion detection on interval ───────────────────────────────
+      intervalRef.current = setInterval(async () => {
+        if (!videoRef.current || !faceapiRef.current || !modelsLoadedRef.current) return;
+        const faceapi = faceapiRef.current;
+        try {
+          const result = await faceapi
+            .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+            .withFaceExpressions();
+
+          if (!result) return;
+
+          const { expressions } = result;
+
+          // Track dominant emotion for visible UI
+          const dominant = (Object.entries(expressions as Record<string, number>)
+            .sort((a, b) => b[1] - a[1])[0][0]) as string;
+          if (mounted) setCurrentEmotion(dominant);
+
+          // confused = fearful + sad; frustrated = angry + disgusted
+          const confusedScore = (expressions.fearful ?? 0) + (expressions.sad ?? 0);
+          const frustratedScore = (expressions.angry ?? 0) + (expressions.disgusted ?? 0);
+
+          if (confusedScore > 0.25) {
+            consecutiveRef.current.confused++;
+            consecutiveRef.current.frustrated = 0;
+            if (consecutiveRef.current.confused >= CONSECUTIVE_THRESHOLD) {
+              consecutiveRef.current = { confused: 0, frustrated: 0 };
+              onConfusionDetectedRef.current();
+            }
+          } else if (frustratedScore > 0.25) {
+            consecutiveRef.current.frustrated++;
+            consecutiveRef.current.confused = 0;
+            if (consecutiveRef.current.frustrated >= CONSECUTIVE_THRESHOLD) {
+              consecutiveRef.current = { confused: 0, frustrated: 0 };
+              onConfusionDetectedRef.current();
+            }
+          } else {
+            consecutiveRef.current = { confused: 0, frustrated: 0 };
+          }
+        } catch {
+          // silent — detection errors must not interrupt learning
+        }
+      }, DETECTION_INTERVAL_MS);
+    };
+
+    setup();
+
+    return () => {
+      mounted = false;
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
-    }
-    setHasCamera(false);
+    };
+  }, [isActive]);
+
+  // Hidden mode: video has real dimensions so face-api.js can analyse frames,
+  // but is visually hidden via visibility:hidden (opacity:0 still takes layout space,
+  // visibility:hidden removes it from view without affecting detection).
+  if (hidden) {
+    return (
+      <video
+        ref={videoRef}
+        muted
+        playsInline
+        aria-hidden
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          right: 0,
+          width: 160,
+          height: 120,
+          visibility: 'hidden',
+          pointerEvents: 'none',
+          zIndex: -1,
+        }}
+      />
+    );
+  }
+
+  // Visible mode UI
+  const emotionEmoji: Record<string, string> = {
+    happy: '😊', neutral: '😐', sad: '😢',
+    angry: '😠', fearful: '😨', disgusted: '😒', surprised: '😲',
   };
-
-  const handleConfusionHelp = () => {
-    setShowConfusionAlert(false);
-    onConfusionDetected();
-  };
-
-  const emotionConfig = {
-    happy: { emoji: '😊', label: 'Great!', color: 'text-emerald-400' },
-    focused: { emoji: '🎯', label: 'Focused', color: 'text-blue-400' },
-    confused: { emoji: '🤔', label: 'Confused?', color: 'text-yellow-400' },
-    bored: { emoji: '😐', label: 'Bored?', color: 'text-orange-400' },
-  };
-
-  const config = emotionConfig[currentEmotion];
-
-  if (hidden) return null;
 
   return (
     <div className="w-full">
-      {/* Camera toggle */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-slate-400 font-medium">Emotion Tracker</span>
         <button
@@ -118,7 +194,6 @@ export default function EmotionDetector({ onConfusionDetected, isActive, onToggl
 
       {isActive ? (
         <div className="space-y-2">
-          {/* Video feed or placeholder */}
           <div className="relative rounded-lg overflow-hidden bg-slate-900 aspect-video border border-slate-700">
             {hasCamera ? (
               <video
@@ -143,20 +218,12 @@ export default function EmotionDetector({ onConfusionDetected, isActive, onToggl
                 )}
               </div>
             )}
-
-            {/* Emotion overlay */}
-            {isActive && (
-              <div className="absolute bottom-1 left-1 right-1 flex items-center justify-between bg-black/60 backdrop-blur-sm rounded px-2 py-1">
-                <span className="text-sm">{config.emoji}</span>
-                <span className={`text-[10px] font-medium ${config.color}`}>{config.label}</span>
-                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              </div>
-            )}
+            <div className="absolute bottom-1 left-1 right-1 flex items-center justify-between bg-black/60 backdrop-blur-sm rounded px-2 py-1">
+              <span className="text-sm">{emotionEmoji[currentEmotion] ?? '🎯'}</span>
+              <span className="text-[10px] font-medium text-slate-300 capitalize">{currentEmotion}</span>
+              <div className={`w-1.5 h-1.5 rounded-full ${modelsReady ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
+            </div>
           </div>
-
-          <p className="text-[10px] text-slate-500 text-center">
-            Mock emotion detection
-          </p>
         </div>
       ) : (
         <div className="rounded-lg bg-slate-800/50 border border-slate-700/50 p-3 flex flex-col items-center gap-2">
@@ -166,42 +233,6 @@ export default function EmotionDetector({ onConfusionDetected, isActive, onToggl
           </p>
         </div>
       )}
-
-      {/* Confusion alert popup */}
-      <AnimatePresence>
-        {showConfusionAlert && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 10 }}
-            className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/40 rounded-xl"
-          >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <div className="flex items-center gap-1.5">
-                <HelpCircle size={14} className="text-yellow-400 flex-shrink-0" />
-                <p className="text-xs text-yellow-300 font-medium">You look confused!</p>
-              </div>
-              <button
-                onClick={() => setShowConfusionAlert(false)}
-                className="text-yellow-600 hover:text-yellow-400"
-              >
-                <X size={12} />
-              </button>
-            </div>
-            <p className="text-[11px] text-slate-400 mb-2">
-              Do you need help understanding this topic?
-            </p>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleConfusionHelp}
-              className="w-full text-xs py-1"
-            >
-              Switch content type
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

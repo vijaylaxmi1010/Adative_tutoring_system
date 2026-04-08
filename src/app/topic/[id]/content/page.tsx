@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, HelpCircle, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, HelpCircle, X, Camera, CameraOff } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import ContentPlayer from '@/components/content/ContentPlayer';
 import EmotionDetector from '@/components/content/EmotionDetector';
@@ -30,6 +30,9 @@ export default function ContentPage({ params }: PageProps) {
   const [contentFinished, setContentFinished] = useState(false);
   const [videoPaused, setVideoPaused] = useState(false);
   const [showConfusionModal, setShowConfusionModal] = useState(false);
+  const [showCameraPrompt, setShowCameraPrompt] = useState(true);
+  const [emotionEnabled, setEmotionEnabled] = useState(false);
+  const [cameraBlocked, setCameraBlocked] = useState(false);
 
   useEffect(() => {
     const state = getState();
@@ -67,7 +70,7 @@ export default function ContentPage({ params }: PageProps) {
   const handleConfusionYes = () => {
     setShowConfusionModal(false);
     setVideoPaused(false);
-    if (preference === 'video') handleTogglePreference();
+    handleTogglePreference();
   };
 
   const handleConfusionNo = () => {
@@ -143,6 +146,47 @@ export default function ContentPage({ params }: PageProps) {
                   pauseVideo={videoPaused}
                 />
 
+                {/* Camera permission prompt — shown once on page load */}
+                {showCameraPrompt && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-900/80 backdrop-blur-sm z-20">
+                    <div className="bg-slate-800 border border-indigo-500/40 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Camera size={20} className="text-indigo-400 flex-shrink-0" />
+                          <h3 className="text-white font-bold text-lg">Enable Emotion Detection?</h3>
+                        </div>
+                        <button
+                          onClick={() => setShowCameraPrompt(false)}
+                          className="text-slate-500 hover:text-white transition-colors"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                      <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                        GeoLearn can use your camera to detect if you look confused or frustrated while learning, and offer to switch content types to help you better.
+                      </p>
+                      <div className="flex flex-col gap-3">
+                        <Button
+                          variant="primary"
+                          size="md"
+                          className="w-full"
+                          onClick={() => { setEmotionEnabled(true); setShowCameraPrompt(false); }}
+                        >
+                          Yes, enable camera
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="md"
+                          className="w-full"
+                          onClick={() => setShowCameraPrompt(false)}
+                        >
+                          No thanks, skip
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Confusion modal — overlays the content when triggered */}
                 {showConfusionModal && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-900/80 backdrop-blur-sm z-20">
@@ -150,18 +194,22 @@ export default function ContentPage({ params }: PageProps) {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <HelpCircle size={20} className="text-yellow-400 flex-shrink-0" />
-                          <h3 className="text-white font-bold text-lg">Feeling confused?</h3>
+                          <h3 className="text-white font-bold text-lg">You look confused!</h3>
                         </div>
                         <button onClick={handleConfusionNo} className="text-slate-500 hover:text-white transition-colors">
                           <X size={18} />
                         </button>
                       </div>
                       <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-                        We noticed you might be struggling. Would you like a detailed text explanation instead?
+                        Would you like me to explain this better? I can switch to{' '}
+                        <span className="text-white font-medium">
+                          {preference === 'video' ? 'a detailed text explanation' : 'a video walkthrough'}
+                        </span>{' '}
+                        for you.
                       </p>
                       <div className="flex flex-col gap-3">
                         <Button variant="primary" size="md" className="w-full" onClick={handleConfusionYes}>
-                          Yes, show me a detailed explanation
+                          Yes, explain it differently
                         </Button>
                         <Button variant="secondary" size="md" className="w-full" onClick={handleConfusionNo}>
                           No, I&apos;m fine — continue
@@ -206,14 +254,33 @@ export default function ContentPage({ params }: PageProps) {
               transition={{ delay: 0.2 }}
               className="space-y-5"
             >
-              {/* Hidden background emotion detector */}
+              {/* Hidden background emotion detector — only active after user grants permission */}
               <EmotionDetector
-                isActive
+                isActive={emotionEnabled}
                 hidden
                 alertThresholdFrames={engagementConfig.emotionAlertFrames}
-                onToggle={() => {}}
+                onToggle={() => setEmotionEnabled((v) => !v)}
                 onConfusionDetected={handleConfusion}
+                onCameraError={() => { setEmotionEnabled(false); setCameraBlocked(true); }}
               />
+
+              {/* Camera blocked banner */}
+              {cameraBlocked && (
+                <div className="bg-slate-800 rounded-2xl border border-red-500/30 p-4 shadow-xl">
+                  <div className="flex items-start gap-3">
+                    <CameraOff size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-red-300 mb-1">Camera access blocked</p>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Emotion detection is disabled. To enable it, allow camera access in your browser settings and reload the page.
+                      </p>
+                    </div>
+                    <button onClick={() => setCameraBlocked(false)} className="text-slate-600 hover:text-slate-300 flex-shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Subtopics sidebar */}
               <div className="bg-slate-800 rounded-2xl border border-slate-700/50 p-5 shadow-xl">
