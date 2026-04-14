@@ -1,344 +1,122 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { BookOpen, Star, Zap, Trophy, ArrowRight, Play } from 'lucide-react';
-import Modal from '@/components/ui/Modal';
-import Button from '@/components/ui/Button';
+import { BookOpen, ArrowRight, Play, Lock, ExternalLink } from 'lucide-react';
 import { getState, setStudent, clearState } from '@/lib/store';
-import { generateId } from '@/lib/utils';
 import { StudentProfile } from '@/types';
 import { extractSessionParams } from '@/lib/mergeApi';
 
-// Animated geometric shapes
-function FloatingShape({ className, delay = 0, style }: { className: string; delay?: number; style?: React.CSSProperties }) {
-  return (
-    <motion.div
-      className={className}
-      style={style}
-      animate={{
-        y: [-15, 15, -15],
-        rotate: [0, 10, -10, 0],
-      }}
-      transition={{
-        duration: 6 + delay,
-        repeat: Infinity,
-        ease: 'easeInOut',
-        delay,
-      }}
-    />
-  );
-}
-
 export default function LandingPage() {
   const router = useRouter();
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [returningStudent, setReturningStudent] = useState<StudentProfile | null>(null);
-  const [form, setForm] = useState({ name: '', age: '11', grade: '6' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
-    extractSessionParams(); // capture token/student_id/session_id from Merge redirect URL
+    extractSessionParams(); // saves token/student_id/session_id from Merge redirect URL
+
+    // Coming from the Merge portal — auto-login, no form
+    const params = new URLSearchParams(window.location.search);
+    const mergeStudentId = params.get('student_id');
+    const mergeToken = params.get('token');
+
+    if (mergeStudentId && mergeToken) {
+      // Decode JWT payload (read-only, no verification needed) for display name
+      let studentName = mergeStudentId;
+      try {
+        const payloadB64 = mergeToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = JSON.parse(atob(payloadB64));
+        if (decoded.username) studentName = decoded.username;
+      } catch { /* fallback to student_id */ }
+
+      clearState();
+      const student: StudentProfile = {
+        id: mergeStudentId,
+        name: studentName,
+        age: 11,
+        grade: '6',
+        preference: 'video',
+        createdAt: new Date().toISOString(),
+      };
+      setStudent(student);
+      router.push('/map');
+      return;
+    }
+
+    // No Merge params — check for an existing session (student returning mid-session)
     const state = getState();
     if (state.student) {
       setReturningStudent(state.student);
     }
-  }, []);
-
-  const handleStart = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name.trim()) {
-      setError('Please enter your name');
-      return;
-    }
-    setLoading(true);
-    // Same person returning — restore their progress
-    const existing = getState();
-    if (existing.student?.name.toLowerCase() === form.name.trim().toLowerCase()) {
-      setTimeout(() => router.push('/map'), 300);
-      return;
-    }
-    clearState();
-    const student: StudentProfile = {
-      id: generateId(),
-      name: form.name.trim(),
-      age: parseInt(form.age),
-      grade: form.grade,
-      preference: 'video',
-      createdAt: new Date().toISOString(),
-    };
-    setStudent(student);
-    setTimeout(() => {
-      router.push('/onboarding');
-    }, 500);
-  };
-
-  const handleContinue = () => {
-    router.push('/map');
-  };
-
-  const handleReset = () => {
-    clearState();
-    setReturningStudent(null);
-    setShowResetConfirm(false);
-  };
-
-  const features = [
-    { icon: <Zap size={20} />, title: 'Adaptive Learning', desc: 'Content adjusts to your level using AI' },
-    { icon: <Trophy size={20} />, title: 'Track Progress', desc: 'See how your knowledge grows over time' },
-    { icon: <Star size={20} />, title: '10 Topics', desc: 'From basic shapes to advanced construction' },
-  ];
+  }, [router]);
 
   return (
-    <div className="min-h-screen bg-slate-900 geo-bg relative overflow-x-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/40 via-slate-900 to-purple-950/30 pointer-events-none" />
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center px-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-md w-full text-center"
+      >
+        {/* Logo */}
+        <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-600/30">
+          <BookOpen size={28} className="text-white" />
+        </div>
 
-      {/* Floating geometric shapes */}
-      <FloatingShape
-        className="absolute top-20 left-12 w-16 h-16 border-2 border-indigo-500/30 rounded-lg rotate-12"
-        delay={0}
-      />
-      <FloatingShape
-        className="absolute top-40 right-24 w-12 h-12 border-2 border-purple-500/30 rounded-full"
-        delay={1.5}
-      />
-      <FloatingShape
-        className="absolute bottom-40 left-24 w-20 h-20 border-2 border-amber-500/20"
-        style={{ clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)' }}
-        delay={3}
-      />
-      <FloatingShape
-        className="absolute bottom-32 right-16 w-14 h-14 border-2 border-emerald-500/25 rotate-45"
-        delay={2}
-      />
-      <FloatingShape
-        className="absolute top-1/2 left-8 w-8 h-8 bg-indigo-600/10 border border-indigo-500/20 rounded-full"
-        delay={4}
-      />
+        <h1 className="text-4xl font-black text-white mb-2">GeoLearn</h1>
+        <p className="text-slate-400 text-base mb-8">
+          Grade 6 · Lines, Angles &amp; Constructions
+        </p>
 
-      {/* Hex pattern decorations */}
-      <div className="absolute top-10 right-10 opacity-10">
-        <svg width="200" height="200" viewBox="0 0 200 200">
-          {[0, 1, 2, 3].map((row) =>
-            [0, 1, 2, 3].map((col) => (
-              <polygon
-                key={`${row}-${col}`}
-                points="30,0 60,17 60,51 30,68 0,51 0,17"
-                fill="none"
-                stroke="#6366f1"
-                strokeWidth="0.5"
-                transform={`translate(${col * 65 + (row % 2) * 32}, ${row * 55})`}
-              />
-            ))
-          )}
-        </svg>
-      </div>
-
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Nav */}
-        <nav className="px-10 py-7 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
-              <BookOpen size={18} className="text-white" />
-            </div>
-            <span className="font-bold text-white text-lg">GeoLearn</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {returningStudent && (
-              <Button variant="ghost" size="sm" onClick={handleContinue}>
-                Continue as {returningStudent.name}
-              </Button>
-            )}
-            <Button variant="primary" size="sm" onClick={() => setIsLoginOpen(true)}>
-              {returningStudent ? 'New Session' : 'Start Learning'}
-            </Button>
-          </div>
-        </nav>
-
-        {/* Hero */}
-        <main className="flex-1 flex flex-col items-center justify-center px-10 text-center pt-8 pb-16">
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-6"
-          >
-            <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-sm font-medium">
-              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-              Grade 6 Geometry · Adaptive AI Tutor
-            </span>
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight"
-          >
-            Learn Geometry
-            <br />
-            <span className="gradient-text">the Smart Way</span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-slate-400 text-xl max-w-2xl mb-10 leading-relaxed"
-          >
-            An adaptive tutoring system that learns how you learn. It gives you the perfect
-            challenge — not too hard, not too easy — so you always keep improving!
-          </motion.p>
-
-          {/* CTA buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-4 mb-14"
-          >
-            {returningStudent ? (
-              <>
-                <Button variant="primary" size="lg" onClick={handleContinue}>
-                  <Play size={18} />
-                  Continue Learning
-                  <ArrowRight size={18} />
-                </Button>
-                <Button variant="secondary" size="lg" onClick={() => setIsLoginOpen(true)}>
-                  Start Fresh
-                </Button>
-                {!showResetConfirm ? (
-                  <Button variant="danger" size="lg" onClick={() => setShowResetConfirm(true)}>
-                    Reset Progress
-                  </Button>
-                ) : (
-                  <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-2">
-                    <span className="text-sm text-red-300">Are you sure?</span>
-                    <button onClick={handleReset} className="text-xs bg-red-500 hover:bg-red-400 text-white px-3 py-1.5 rounded-lg font-medium transition-colors">
-                      Yes, reset
-                    </button>
-                    <button onClick={() => setShowResetConfirm(false)} className="text-xs text-slate-400 hover:text-white transition-colors">
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <Button variant="primary" size="lg" onClick={() => setIsLoginOpen(true)}>
-                Start Your Journey
-                <ArrowRight size={18} />
-              </Button>
-            )}
-          </motion.div>
-
-          {/* Features */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-5xl w-full"
-          >
-            {features.map((f, i) => (
-              <div
-                key={i}
-                className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl p-7 text-left"
+        {returningStudent ? (
+          /* Returning student — continue their existing Merge session */
+          <div className="space-y-4">
+            <div className="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-6">
+              <p className="text-slate-400 text-sm mb-1">Active session</p>
+              <p className="text-xl font-bold text-white mb-5">{returningStudent.name}</p>
+              <button
+                onClick={() => router.push('/map')}
+                className="inline-flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
               >
-                <div className="w-12 h-12 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-5">
-                  {f.icon}
-                </div>
-                <h3 className="font-bold text-white text-lg mb-2">{f.title}</h3>
-                <p className="text-slate-400 text-base leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </motion.div>
-
-          {/* Topic count */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="mt-12 flex items-center gap-14 text-center"
-          >
-            {[
-              { num: '10', label: 'Topics' },
-              { num: '100+', label: 'Questions' },
-              { num: '4-Level', label: 'Hints' },
-              { num: 'Smart', label: 'AI System' },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className="text-3xl font-black text-white mb-2">{stat.num}</p>
-                <p className="text-sm text-slate-500 tracking-wide">{stat.label}</p>
-              </div>
-            ))}
-          </motion.div>
-        </main>
-      </div>
-
-      {/* Login Modal */}
-      <Modal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} title="Start Learning">
-        <form onSubmit={handleStart} className="p-6 space-y-5">
-          <p className="text-slate-400 text-sm">
-            Enter your details to create your personalized learning profile.
-          </p>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Your Name
-            </label>
-            <input
-              type="text"
-              placeholder="e.g., Priya Sharma"
-              value={form.name}
-              onChange={(e) => { setForm({ ...form, name: e.target.value }); setError(''); }}
-              className="w-full bg-slate-700/60 border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-              autoFocus
-            />
-            {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Age</label>
-              <select
-                value={form.age}
-                onChange={(e) => setForm({ ...form, age: e.target.value })}
-                className="w-full bg-slate-700/60 border border-slate-600 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 transition-colors"
-              >
-                <option value="10">10</option>
-                <option value="11">11</option>
-                <option value="12">12</option>
-              </select>
+                <Play size={16} />
+                Continue Learning
+                <ArrowRight size={16} />
+              </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Class</label>
-              <select
-                value={form.grade}
-                onChange={(e) => setForm({ ...form, grade: e.target.value })}
-                className="w-full bg-slate-700/60 border border-slate-600 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+            <p className="text-slate-500 text-xs">
+              To start a new session, open this chapter from the{' '}
+              <a
+                href="https://kaushik-dev.online"
+                className="text-indigo-400 underline hover:text-indigo-300 inline-flex items-center gap-0.5"
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                <option value="6">6th Grade</option>
-              </select>
-            </div>
+                Merge Portal <ExternalLink size={10} />
+              </a>
+            </p>
           </div>
-
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            loading={loading}
-            className="w-full"
-          >
-            Let&apos;s Go!
-            <ArrowRight size={18} />
-          </Button>
-        </form>
-      </Modal>
+        ) : (
+          /* No session — access must come through the Merge portal */
+          <div className="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-8">
+            <div className="w-14 h-14 rounded-full bg-slate-700/80 border border-slate-600/50 flex items-center justify-center mx-auto mb-4">
+              <Lock size={22} className="text-slate-400" />
+            </div>
+            <h2 className="text-lg font-bold text-white mb-2">Authentication Required</h2>
+            <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+              This chapter is part of the ET605 course. Please sign in through the Merge
+              student portal to access it.
+            </p>
+            <a
+              href="https://kaushik-dev.online"
+              className="inline-flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Go to Merge Portal
+              <ExternalLink size={16} />
+            </a>
+          </div>
+        )}
+      </motion.div>
     </div>
   );
 }

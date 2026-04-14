@@ -16,7 +16,7 @@ import { updateBKT, getTopicEngagementConfig, getTopicProgressionConfig, getTopi
 import { use } from 'react';
 import { Question, QuestionResponse, BKTParams } from '@/types';
 import { cn } from '@/lib/utils';
-import { getSessionParams, sendRecommendation, RecommendPayload, RecommendResponse } from '@/lib/mergeApi';
+import { getSessionParams, sendRecommendation, RecommendPayload, RecommendResponse, CHAPTER_ID } from '@/lib/mergeApi';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -79,12 +79,17 @@ export default function AssessmentPage({ params }: PageProps) {
   // Keep responsesRef in sync so the beforeunload handler reads current data
   useEffect(() => { responsesRef.current = responses; }, [responses]);
 
-  // Send "exited_midway" if the student leaves mid-assessment
+  // Alert + send "exited_midway" if the student leaves mid-assessment
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (phase === 'complete') return; // already finalized
       const { student_id, session_id } = getSessionParams();
       if (!student_id || !session_id) return;
+
+      // Show the browser "Are you sure?" dialog
+      event.preventDefault();
+      event.returnValue = 'Your progress will be saved. Are you sure you want to leave?';
+
       const rs = responsesRef.current;
       const countable = rs.filter((r) => !r.excluded);
       const correct = countable.filter((r) => r.isCorrect).length;
@@ -94,7 +99,7 @@ export default function AssessmentPage({ params }: PageProps) {
       const payload: RecommendPayload = {
         student_id,
         session_id,
-        chapter_id: topicId,
+        chapter_id: CHAPTER_ID,
         timestamp: new Date().toISOString(),
         session_status: 'exited_midway',
         correct_answers: correct,
@@ -270,7 +275,7 @@ export default function AssessmentPage({ params }: PageProps) {
       const payload: RecommendPayload = {
         student_id,
         session_id,
-        chapter_id: topicId,
+        chapter_id: CHAPTER_ID,
         timestamp: new Date().toISOString(),
         session_status: 'completed',
         correct_answers: correct,

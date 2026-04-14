@@ -10,7 +10,8 @@ import { getState } from '@/lib/store';
 import { AppState } from '@/types';
 import { ProgressBar } from '@/components/ui/Progress';
 import Button from '@/components/ui/Button';
-import { TOPICS } from '@/lib/mock-data';
+import { TOPICS, QUESTIONS } from '@/lib/mock-data';
+import { getSessionParams, getSessionStartTime, CHAPTER_ID } from '@/lib/mergeApi';
 
 export default function MapPage() {
   const router = useRouter();
@@ -24,6 +25,55 @@ export default function MapPage() {
     }
     setState(s);
   }, [router]);
+
+  // Alert + send exited_midway to Merge API when student closes/leaves the chapter
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      const { student_id, session_id } = getSessionParams();
+      if (!student_id || !session_id) return;
+
+      // Show the browser "Are you sure?" dialog
+      event.preventDefault();
+      event.returnValue = 'Your progress will be saved. Are you sure you want to leave?';
+
+      // Aggregate stats from all topics attempted so far
+      const s = getState();
+      const progressValues = Object.values(s.topicProgress);
+      const completedCount = progressValues.filter((p) => p.isCompleted).length;
+      const correctAnswers = progressValues.reduce((sum, p) => sum + (p.correctAnswers || 0), 0);
+      const attempted = progressValues.reduce((sum, p) => sum + (p.totalQuestions || 0), 0);
+      const hintsUsed = progressValues.reduce((sum, p) => sum + (p.hintsUsed || 0), 0);
+      const retryCount = progressValues.reduce((sum, p) => sum + ((p.assessmentAttempts || 0) + (p.remedialAttempts || 0)), 0);
+      const totalQs = QUESTIONS.filter((q) => !q.isPreAssessment).length;
+      const timeSpent = Math.round((Date.now() - getSessionStartTime()) / 1000);
+
+      const payload = {
+        student_id,
+        session_id,
+        chapter_id: CHAPTER_ID,
+        timestamp: new Date().toISOString(),
+        session_status: 'exited_midway',
+        correct_answers: correctAnswers,
+        wrong_answers: Math.max(0, attempted - correctAnswers),
+        questions_attempted: attempted,
+        total_questions: Math.max(attempted, totalQs),
+        retry_count: retryCount,
+        hints_used: hintsUsed,
+        total_hints_embedded: totalQs * 4,
+        time_spent_seconds: timeSpent,
+        topic_completion_ratio: progressValues.length > 0 ? completedCount / progressValues.length : 0,
+      };
+
+      // sendBeacon works reliably even when the tab is closing
+      navigator.sendBeacon(
+        'https://kaushik-dev.online/api/recommend/',
+        new Blob([JSON.stringify(payload)], { type: 'application/json' })
+      );
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   if (!state?.student) return null;
 

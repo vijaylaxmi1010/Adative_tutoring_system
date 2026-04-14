@@ -1,13 +1,20 @@
 // Merge Platform API Integration
 // Handles session extraction from redirect URL and recommendation submission
 
+/** Canonical chapter ID assigned to this team — must match the Merge portal exactly */
+export const CHAPTER_ID = 'grade6_lines_angles_and_constructions';
+
 export function extractSessionParams(): void {
   if (typeof window === 'undefined') return;
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token');
   const student_id = params.get('student_id');
   const session_id = params.get('session_id');
-  if (token) sessionStorage.setItem('merge_token', token);
+  if (token) {
+    sessionStorage.setItem('merge_token', token);
+    // Record session start time for time_spent_seconds tracking
+    sessionStorage.setItem('merge_session_start', Date.now().toString());
+  }
   if (student_id) sessionStorage.setItem('merge_student_id', student_id);
   if (session_id) sessionStorage.setItem('merge_session_id', session_id);
 }
@@ -21,6 +28,13 @@ export function getSessionParams() {
     student_id: sessionStorage.getItem('merge_student_id'),
     session_id: sessionStorage.getItem('merge_session_id'),
   };
+}
+
+/** Returns the Unix timestamp (ms) when the Merge session started */
+export function getSessionStartTime(): number {
+  if (typeof window === 'undefined') return Date.now();
+  const stored = sessionStorage.getItem('merge_session_start');
+  return stored ? parseInt(stored, 10) : Date.now();
 }
 
 export interface RecommendPayload {
