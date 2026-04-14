@@ -4,51 +4,21 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { BookOpen, ArrowRight, Play, Lock, ExternalLink } from 'lucide-react';
-import { getState, setStudent, clearState } from '@/lib/store';
+import { getState } from '@/lib/store';
 import { StudentProfile } from '@/types';
-import { extractSessionParams } from '@/lib/mergeApi';
 
 export default function LandingPage() {
   const router = useRouter();
   const [returningStudent, setReturningStudent] = useState<StudentProfile | null>(null);
 
   useEffect(() => {
-    extractSessionParams(); // saves token/student_id/session_id from Merge redirect URL
-
-    // Coming from the Merge portal — auto-login, no form
-    const params = new URLSearchParams(window.location.search);
-    const mergeStudentId = params.get('student_id');
-    const mergeToken = params.get('token');
-
-    if (mergeStudentId && mergeToken) {
-      // Decode JWT payload (read-only, no verification needed) for display name
-      let studentName = mergeStudentId;
-      try {
-        const payloadB64 = mergeToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        const decoded = JSON.parse(atob(payloadB64));
-        if (decoded.username) studentName = decoded.username;
-      } catch { /* fallback to student_id */ }
-
-      clearState();
-      const student: StudentProfile = {
-        id: mergeStudentId,
-        name: studentName,
-        age: 11,
-        grade: '6',
-        preference: 'video',
-        createdAt: new Date().toISOString(),
-      };
-      setStudent(student);
-      router.push('/map');
-      return;
-    }
-
-    // No Merge params — check for an existing session (student returning mid-session)
+    // Merge redirect is handled globally by SessionProvider in layout.tsx.
+    // This page only runs when there are NO Merge params (direct visit).
     const state = getState();
     if (state.student) {
       setReturningStudent(state.student);
     }
-  }, [router]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center px-6">

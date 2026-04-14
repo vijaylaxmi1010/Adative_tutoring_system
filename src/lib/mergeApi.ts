@@ -93,12 +93,14 @@ export async function sendRecommendation(payload: RecommendPayload): Promise<Rec
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const body = await response.text().catch(() => '');
+      console.error(`[Merge API] ${response.status} error:`, body, '\nPayload sent:', payload);
+      throw new Error(`API error ${response.status}: ${body}`);
     }
 
     return await response.json() as RecommendResponse;
   } catch (error) {
-    console.error('Failed to send recommendation:', error);
+    console.error('[Merge API] sendRecommendation failed:', error);
     try {
       localStorage.setItem('pendingRecommendation', JSON.stringify(payload));
     } catch { /* ignore storage errors */ }

@@ -272,6 +272,10 @@ export default function AssessmentPage({ params }: PageProps) {
       const state = getState();
       const progressValues = Object.values(state.topicProgress);
       const completedCount = progressValues.filter((p) => p.isCompleted).length;
+
+      // Use allResponses.length for both so questions_attempted == total_questions
+      // (required by Merge API validation when session_status == "completed")
+      const attempted = allResponses.length;
       const payload: RecommendPayload = {
         student_id,
         session_id,
@@ -279,10 +283,10 @@ export default function AssessmentPage({ params }: PageProps) {
         timestamp: new Date().toISOString(),
         session_status: 'completed',
         correct_answers: correct,
-        wrong_answers: countableResponses.length - correct,
-        questions_attempted: countableResponses.length,
-        total_questions: allResponses.length,
-        retry_count: assessmentAttemptsRef.current,
+        wrong_answers: attempted - correct,
+        questions_attempted: attempted,
+        total_questions: attempted,
+        retry_count: Math.min(assessmentAttemptsRef.current, attempted),
         hints_used: totalHints,
         total_hints_embedded: questions.length * 4,
         time_spent_seconds: Math.round((Date.now() - startTimeRef.current) / 1000),
@@ -293,6 +297,9 @@ export default function AssessmentPage({ params }: PageProps) {
         setRecommendation(result);
         setRecommendationLoading(false);
       });
+    } else {
+      // Merge params missing — student did not arrive through the portal
+      console.warn('[GeoLearn] Recommendation API skipped: no student_id/session_id in sessionStorage. Student must arrive via the Merge portal.');
     }
   }, [assessmentConfig.remedialThreshold, progressionConfig.maxAttemptsBeforeForceAdvance, progressionConfig.minQuestionsBeforeMasteryCheck, progressionConfig.unlockThresholdPL, questions, topicId]);
 

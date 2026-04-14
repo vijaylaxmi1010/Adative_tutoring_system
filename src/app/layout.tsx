@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import SessionProvider from '@/components/providers/SessionProvider';
 
 export const metadata: Metadata = {
   title: 'GeoLearn - Adaptive Geometry Tutor',
@@ -14,7 +15,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="bg-slate-900 text-white antialiased min-h-screen">
-        {children}
+        {/* SessionProvider captures Merge ?token/student_id/session_id on any route */}
+        <SessionProvider>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );
