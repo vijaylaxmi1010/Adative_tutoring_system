@@ -10,9 +10,17 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { jwtDecode } from 'jwt-decode';
 import { extractSessionParams } from '@/lib/mergeApi';
-import { getState, setStudent, clearState } from '@/lib/store';
+import { setStudent, clearState } from '@/lib/store';
 import { StudentProfile } from '@/types';
+
+interface MergeJwtPayload {
+  user_id?: number;
+  username?: string;
+  student_id?: string;
+  exp?: number;
+}
 
 export default function SessionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -27,11 +35,10 @@ export default function SessionProvider({ children }: { children: React.ReactNod
     // Save token / student_id / session_id to sessionStorage for later API calls
     extractSessionParams();
 
-    // Decode JWT payload (read-only — no verification) to get the display name
+    // Decode JWT payload to get the display name
     let studentName = mergeStudentId;
     try {
-      const b64 = mergeToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      const decoded = JSON.parse(atob(b64));
+      const decoded = jwtDecode<MergeJwtPayload>(mergeToken);
       if (decoded.username) studentName = decoded.username;
     } catch { /* fall back to student_id */ }
 
