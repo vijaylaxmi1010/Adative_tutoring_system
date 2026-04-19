@@ -16,6 +16,11 @@ interface QuestionCardProps {
 
 export default function QuestionCard({ question, onAnswer, showResult, isCorrect }: QuestionCardProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [shuffledOptions, setShuffledOptions] = useState<string[]>(() =>
+    question.type === 'mcq' && question.options
+      ? [...question.options].sort(() => Math.random() - 0.5)
+      : question.options || [],
+  );
   const [arrangeOrder, setArrangeOrder] = useState<string[]>(question.options || []);
   const [matchState, setMatchState] = useState<Record<string, string>>({});
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
@@ -28,6 +33,11 @@ export default function QuestionCard({ question, onAnswer, showResult, isCorrect
 
   useEffect(() => {
     setSelected(null);
+    setShuffledOptions(
+      question.type === 'mcq' && question.options
+        ? [...question.options].sort(() => Math.random() - 0.5)
+        : question.options || [],
+    );
     setArrangeOrder(question.options ? [...question.options].sort(() => Math.random() - 0.5) : []);
     setMatchState({});
     setSelectedLeft(null);
@@ -89,7 +99,7 @@ export default function QuestionCard({ question, onAnswer, showResult, isCorrect
   };
 
   if (question.type === 'mcq' || question.type === 'true-false') {
-    const options = question.type === 'true-false' ? ['True', 'False'] : (question.options || []);
+    const options = question.type === 'true-false' ? ['True', 'False'] : shuffledOptions;
     return (
       <div>
         <div className="space-y-4 mb-8">
