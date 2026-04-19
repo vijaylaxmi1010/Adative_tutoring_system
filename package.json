@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3003",
-    "build": "NODE_OPTIONS=--max-old-space-size=400 next build --turbopack",
+    "build": "NODE_OPTIONS=--max-old-space-size=400 next build --turbopack --no-lint",
     "typecheck": "tsc --noEmit",
     "start": "next start -p 3003",
     "lint": "next lint",
