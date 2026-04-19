@@ -11,7 +11,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { jwtDecode } from 'jwt-decode';
-import { extractSessionParams } from '@/lib/mergeApi';
+import { extractSessionParams, retryPendingRecommendation } from '@/lib/mergeApi';
 import { setStudent, clearState } from '@/lib/store';
 import { StudentProfile } from '@/types';
 
@@ -34,6 +34,9 @@ export default function SessionProvider({ children }: { children: React.ReactNod
 
     // Save token / student_id / session_id to sessionStorage for later API calls
     extractSessionParams();
+
+    // Retry any recommendation that failed to send in a previous session
+    retryPendingRecommendation();
 
     // Decode JWT payload to get the display name
     let studentName = mergeStudentId;

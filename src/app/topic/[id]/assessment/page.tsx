@@ -91,8 +91,10 @@ export default function AssessmentPage({ params }: PageProps) {
       event.returnValue = 'Your progress will be saved. Are you sure you want to leave?';
 
       const rs = responsesRef.current;
-      const countable = rs.filter((r) => !r.excluded);
-      const correct = countable.filter((r) => r.isCorrect).length;
+      // Count all attempted questions (including L4-excluded ones) for questions_attempted.
+      // correct_answers counts only non-excluded correct so the server sees genuine scores.
+      const correct = rs.filter((r) => r.isCorrect && !r.excluded).length;
+      const attempted = rs.length;
       const state = getState();
       const progressValues = Object.values(state.topicProgress);
       const completedCount = progressValues.filter((p) => p.isCompleted).length;
@@ -103,8 +105,8 @@ export default function AssessmentPage({ params }: PageProps) {
         timestamp: new Date().toISOString(),
         session_status: 'exited_midway',
         correct_answers: correct,
-        wrong_answers: countable.length - correct,
-        questions_attempted: countable.length,
+        wrong_answers: attempted - correct,
+        questions_attempted: attempted,
         total_questions: questions.length,
         retry_count: assessmentAttemptsRef.current,
         hints_used: rs.reduce((s, r) => s + r.hintsUsed, 0),
