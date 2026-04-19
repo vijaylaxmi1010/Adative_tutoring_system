@@ -2,7 +2,7 @@
 // Handles session extraction from redirect URL and recommendation submission
 
 /** Canonical chapter ID assigned to this team — must match the Merge portal exactly */
-export const CHAPTER_ID = 'grade6_lines_angles_and_constructions';
+export const CHAPTER_ID = 'grade6_lines_angles';
 
 const RECOMMEND_URL = 'https://kaushik-dev.online/api/recommend/';
 const PENDING_KEY = 'pendingRecommendation';

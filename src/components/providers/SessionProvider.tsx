@@ -18,6 +18,10 @@ import { StudentProfile } from '@/types';
 interface MergeJwtPayload {
   user_id?: number;
   username?: string;
+  name?: string;
+  full_name?: string;
+  display_name?: string;
+  first_name?: string;
   student_id?: string;
   exp?: number;
 }
@@ -38,11 +42,17 @@ export default function SessionProvider({ children }: { children: React.ReactNod
     // Retry any recommendation that failed to send in a previous session
     retryPendingRecommendation();
 
-    // Decode JWT payload to get the display name
+    // Decode JWT payload to get the display name — try common field names
     let studentName = mergeStudentId;
     try {
       const decoded = jwtDecode<MergeJwtPayload>(mergeToken);
-      if (decoded.username) studentName = decoded.username;
+      studentName =
+        decoded.username ||
+        decoded.name ||
+        decoded.full_name ||
+        decoded.display_name ||
+        decoded.first_name ||
+        mergeStudentId;
     } catch { /* fall back to student_id */ }
 
     // Start a fresh session for this Merge-authenticated student
