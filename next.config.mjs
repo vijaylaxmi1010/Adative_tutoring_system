@@ -8,6 +8,10 @@ const nextConfig = {
       },
     ],
   },
+  // Skip type-check and lint during `next build` — run `npm run typecheck` separately
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
+
   // Limit concurrent workers so the build stays within 500 MB RAM
   experimental: {
     workerThreads: false,
