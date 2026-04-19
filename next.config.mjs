@@ -8,6 +8,11 @@ const nextConfig = {
       },
     ],
   },
+  // Limit concurrent workers so the build stays within 500 MB RAM
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+  },
 };
 
 export default nextConfig;
